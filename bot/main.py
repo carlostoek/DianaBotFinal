@@ -19,6 +19,17 @@ from bot.commands.balance import balance_handler
 from bot.commands.history import history_handler
 from bot.commands.daily import daily_handler
 
+# Import inventory commands
+from bot.commands.inventory import inventory_handler, item_handler
+
+# Import narrative commands
+from bot.commands.story import story_command
+from bot.commands.continue_story import continue_command
+from bot.commands.choices import choices_command
+
+# Import narrative handlers
+from bot.handlers.narrative import register_narrative_handlers
+
 # Import event handlers
 from core.event_handlers import setup_event_handlers
 from core.event_bus import event_bus
@@ -52,6 +63,18 @@ def main():
     application.add_handler(CommandHandler("balance", balance_handler))
     application.add_handler(CommandHandler("history", history_handler))
     application.add_handler(CommandHandler("daily", daily_handler))
+    
+    # Add inventory commands
+    application.add_handler(CommandHandler("inventory", inventory_handler))
+    application.add_handler(CommandHandler("item", item_handler))
+    
+    # Add narrative commands
+    application.add_handler(CommandHandler("story", story_command))
+    application.add_handler(CommandHandler("continue", continue_command))
+    application.add_handler(CommandHandler("choices", choices_command))
+
+    # Register narrative callback handlers
+    register_narrative_handlers(application)
 
     # Start the Bot
     logger.info("Starting DianaBot with Event Bus...")

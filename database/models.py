@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, JSON
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, JSON, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database.connection import Base
 
@@ -165,3 +166,58 @@ class UserInventory(Base):
             "quantity": self.quantity,
             "acquired_at": self.acquired_at.isoformat() if hasattr(self.acquired_at, 'isoformat') else None
         }
+
+
+class NarrativeLevel(Base):
+    """Narrative level model for story progression"""
+    __tablename__ = "narrative_levels"
+
+    id = Column(Integer, primary_key=True, index=True)
+    level_key = Column(String(100), unique=True, nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    unlock_conditions = Column(JSON, nullable=True)  # besitos, items, achievements requeridos
+    order_index = Column(Integer, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<NarrativeLevel(level_key={self.level_key}, title={self.title})>"
+
+
+class NarrativeFragment(Base):
+    """Narrative fragment model for story content"""
+    __tablename__ = "narrative_fragments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    fragment_key = Column(String(100), unique=True, nullable=False, index=True)
+    level_id = Column(Integer, nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    unlock_conditions = Column(JSON, nullable=True)
+    order_index = Column(Integer, nullable=False)
+    is_active = Column(Boolean, default=True)
+    is_starting_fragment = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    progress = relationship("UserNarrativeProgress", back_populates="fragment")
+
+    def __repr__(self):
+        return f"<NarrativeFragment(fragment_key={self.fragment_key}, title={self.title})>"
+
+
+class UserNarrativeProgress(Base):
+    """User narrative progress tracking"""
+    __tablename__ = "user_narrative_progress"
+
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    fragment_id = Column(Integer, ForeignKey("narrative_fragments.id"), primary_key=True)
+    completed_at = Column(DateTime(timezone=True), server_default=func.now())
+    choices_made = Column(JSON, nullable=True)  # decisiones tomadas en este fragmento
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    fragment = relationship("NarrativeFragment", back_populates="progress")
+
+    def __repr__(self):
+        return f"<UserNarrativeProgress(user_id={self.user_id}, fragment_id={self.fragment_id})>"

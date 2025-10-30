@@ -9,7 +9,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from database.connection import engine, Base
-from database.models import User
+from database.models import *
 
 
 def run_migrations():
