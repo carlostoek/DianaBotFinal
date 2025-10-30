@@ -79,3 +79,33 @@ class EventLog(Base):
             "telegram_id": self.telegram_id,
             "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
         }
+
+
+class UserBalance(Base):
+    """User balance model for besitos economy"""
+    __tablename__ = "user_balances"
+
+    user_id = Column(Integer, primary_key=True)
+    besitos = Column(Integer, default=0, nullable=False)
+    lifetime_besitos = Column(Integer, default=0, nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<UserBalance(user_id={self.user_id}, besitos={self.besitos})>"
+
+
+class Transaction(Base):
+    """Transaction model for besitos economy"""
+    __tablename__ = "transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    amount = Column(Integer, nullable=False)
+    transaction_type = Column(String(50), nullable=False)  # 'earn', 'spend', 'gift'
+    source = Column(String(100), nullable=False)  # 'mission', 'purchase', 'daily_reward', etc.
+    description = Column(Text, nullable=True)
+    transaction_metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<Transaction(user_id={self.user_id}, amount={self.amount}, type={self.transaction_type})>"

@@ -12,13 +12,18 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     help_text = (
         "🤖 *DianaBot - Comandos Disponibles*\n\n"
+        "*📋 Básicos:*\n"
         "*/start* - Iniciar sesión y registrarse\n"
         "*/help* - Mostrar esta ayuda\n"
         "*/stats* - Ver tus estadísticas\n\n"
+        "*💰 Economía:*\n"
+        "*/balance* - Ver tus besitos actuales\n"
+        "*/history* - Ver historial de transacciones\n"
+        "*/daily* - Reclamar recompensa diaria (10 💋)\n\n"
         "*Próximamente:*\n"
         "• Narrativas interactivas\n"
-        "• Sistema de gamificación\n"
-        "• Logros y recompensas\n\n"
+        "• Logros y recompensas\n"
+        "• Tienda virtual\n\n"
         "¡Explora y diviértete! 🎮"
     )
     
