@@ -2061,8 +2061,9 @@ Transacciones Atómicas: Todas las operaciones con besitos usan transacciones de
 Audit Logs Inmutables: Cada transacción de besitos genera registro que no puede editarse ni eliminarse, solo agregarse.
 
 **Control de Acceso VIP
-
-# Verificar si item desbloquea contenido
+            
+            
+            # Verificar si item desbloquea contenido
             check_unlocks_by_item(user_id, item_key)
     
     # Verificar achievements
