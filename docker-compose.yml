@@ -8,32 +8,31 @@ services:
       POSTGRES_DB: dianabot
       POSTGRES_USER: dianabot_user
       POSTGRES_PASSWORD: dianabot_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dianabot_user"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "pg_isready -U dianabot_user -d dianabot"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   mongodb:
-    image: mongo:7
+    image: mongo:6
     container_name: dianabot_mongodb
     environment:
-      MONGO_INITDB_ROOT_USERNAME: dianabot
-      MONGO_INITDB_ROOT_PASSWORD: dianabot_password
-    volumes:
-      - mongodb_data:/data/db
+      MONGO_INITDB_DATABASE: dianabot
     ports:
       - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/dianabot --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   redis:
     image: redis:7-alpine
@@ -42,39 +41,29 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  bot:
+  app:
     build: .
-    container_name: dianabot_bot
-    depends_on:
-      postgres:
-        condition: service_healthy
-      mongodb:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    container_name: dianabot_app
     environment:
-      - ENVIRONMENT=development
       - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=dianabot
+      - POSTGRES_USER=dianabot_user
+      - POSTGRES_PASSWORD=dianabot_password
       - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_DB=dianabot
       - REDIS_HOST=redis
-    env_file:
-      - .env
+      - REDIS_PORT=6379
+      - REDIS_DB=0
     ports:
       - "8000:8000"
-    volumes:
-      - .:/app
-    command: python -m bot.main
-
-  api:
-    build: .
-    container_name: dianabot_api
     depends_on:
       postgres:
         condition: service_healthy
@@ -82,18 +71,35 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    environment:
-      - ENVIRONMENT=development
-      - POSTGRES_HOST=postgres
-      - MONGO_HOST=mongodb
-      - REDIS_HOST=redis
-    env_file:
-      - .env
-    ports:
-      - "8001:8001"
     volumes:
       - .:/app
-    command: uvicorn api.main:app --host 0.0.0.0 --port 8001 --reload
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+
+  celery:
+    build: .
+    container_name: dianabot_celery
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=dianabot
+      - POSTGRES_USER=dianabot_user
+      - POSTGRES_PASSWORD=dianabot_password
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_DB=dianabot
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: celery -A tasks.celery_app worker --loglevel=info
 
 volumes:
   postgres_data:

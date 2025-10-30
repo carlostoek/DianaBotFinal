@@ -1,0 +1,201 @@
+#!/usr/bin/env python3
+"""
+Narrative seeders for testing the narrative system
+"""
+
+import sys
+import os
+
+# Add the project root to Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from sqlalchemy.orm import Session
+from database.connection import get_db
+from database.models import NarrativeLevel, NarrativeFragment
+
+
+def seed_narrative():
+    """Seed narrative levels and fragments for testing"""
+    
+    db: Session = next(get_db())
+    
+    try:
+        # Update existing narrative levels instead of deleting
+        levels_data = [
+            {
+                "level_key": "level_1_introduction",
+                "title": "El Misterio de la Mansión Diana",
+                "description": "Tu primera aventura en el mundo de Diana",
+                "unlock_conditions": {"min_besitos": 0},  # Available to everyone
+                "order_index": 1,
+                "is_active": True
+            },
+            {
+                "level_key": "level_2_forest",
+                "title": "Secretos del Pasado",
+                "description": "Explora los misterios del bosque",
+                "unlock_conditions": {
+                    "min_besitos": 50,
+                    "required_fragments": ["level_1_end"]
+                },
+                "order_index": 2,
+                "is_active": True
+            },
+            {
+                "level_key": "level_3_attic",
+                "title": "El Ático Prohibido",
+                "description": "Descubre los secretos más oscuros",
+                "unlock_conditions": {
+                    "min_besitos": 100,
+                    "required_items": ["llave_attico"],
+                    "required_fragments": ["level_2_end"]
+                },
+                "order_index": 3,
+                "is_active": True
+            }
+        ]
+        
+        for level_data in levels_data:
+            existing_level = db.query(NarrativeLevel).filter(
+                NarrativeLevel.level_key == level_data["level_key"]
+            ).first()
+            
+            if existing_level:
+                # Update existing level
+                for key, value in level_data.items():
+                    setattr(existing_level, key, value)
+            else:
+                # Create new level
+                level = NarrativeLevel(**level_data)
+                db.add(level)
+        
+        db.commit()
+        
+        # Get level IDs
+        level_1 = db.query(NarrativeLevel).filter(NarrativeLevel.level_key == "level_1_introduction").first()
+        level_2 = db.query(NarrativeLevel).filter(NarrativeLevel.level_key == "level_2_forest").first()
+        level_3 = db.query(NarrativeLevel).filter(NarrativeLevel.level_key == "level_3_attic").first()
+        
+        # Create narrative fragments
+        fragments_data = [
+            # Level 1 fragments
+            {
+                "fragment_key": "intro_1",
+                "level_id": level_1.id,
+                "title": "La Llamada Misteriosa",
+                "unlock_conditions": None,
+                "order_index": 1,
+                "is_active": True
+            },
+            {
+                "fragment_key": "decision_1_a",
+                "level_id": level_1.id,
+                "title": "Investigar el Ruido",
+                "unlock_conditions": {"required_fragments": ["intro_1"]},
+                "order_index": 2,
+                "is_active": True
+            },
+            {
+                "fragment_key": "decision_1_b",
+                "level_id": level_1.id,
+                "title": "Ignorar y Seguir",
+                "unlock_conditions": {"required_fragments": ["intro_1"]},
+                "order_index": 3,
+                "is_active": True
+            },
+            {
+                "fragment_key": "consequence_1_a",
+                "level_id": level_1.id,
+                "title": "Encuentro Inesperado",
+                "unlock_conditions": {"required_fragments": ["decision_1_a"]},
+                "order_index": 4,
+                "is_active": True
+            },
+            {
+                "fragment_key": "consequence_1_b",
+                "level_id": level_1.id,
+                "title": "Camino Seguro",
+                "unlock_conditions": {"required_fragments": ["decision_1_b"]},
+                "order_index": 5,
+                "is_active": True
+            },
+            {
+                "fragment_key": "level_1_end",
+                "level_id": level_1.id,
+                "title": "Final del Nivel 1",
+                "unlock_conditions": {
+                    "required_fragments": ["consequence_1_a", "consequence_1_b"]
+                },
+                "order_index": 6,
+                "is_active": True
+            },
+            
+            # Level 2 fragments
+            {
+                "fragment_key": "intro_2",
+                "level_id": level_2.id,
+                "title": "El Diario Encontrado",
+                "unlock_conditions": {"required_fragments": ["level_1_end"]},
+                "order_index": 1,
+                "is_active": True
+            },
+            {
+                "fragment_key": "level_2_end",
+                "level_id": level_2.id,
+                "title": "Final del Nivel 2",
+                "unlock_conditions": {"required_fragments": ["intro_2"]},
+                "order_index": 2,
+                "is_active": True
+            },
+            
+            # Level 3 fragments (VIP)
+            {
+                "fragment_key": "intro_3",
+                "level_id": level_3.id,
+                "title": "El Ático Revelado",
+                "unlock_conditions": {
+                    "required_fragments": ["level_2_end"],
+                    "required_items": ["llave_attico"]
+                },
+                "order_index": 1,
+                "is_active": True
+            }
+        ]
+        
+        for fragment_data in fragments_data:
+            existing_fragment = db.query(NarrativeFragment).filter(
+                NarrativeFragment.fragment_key == fragment_data["fragment_key"]
+            ).first()
+            
+            if existing_fragment:
+                # Update existing fragment
+                for key, value in fragment_data.items():
+                    setattr(existing_fragment, key, value)
+            else:
+                # Create new fragment
+                fragment = NarrativeFragment(**fragment_data)
+                db.add(fragment)
+        
+        db.commit()
+        
+        print(f"✅ Seeded {len(levels_data)} narrative levels and {len(fragments_data)} fragments successfully!")
+        
+        # Print summary
+        print("\n📖 Narrative content seeded:")
+        for level in db.query(NarrativeLevel).order_by(NarrativeLevel.order_index).all():
+            level_fragments = db.query(NarrativeFragment).filter(
+                NarrativeFragment.level_id == level.id
+            ).all()
+            print(f"  - {level.level_key}: {level.title} - {len(level_fragments)} fragmentos")
+            
+    except Exception as e:
+        print(f"❌ Error seeding narrative content: {e}")
+        import traceback
+        traceback.print_exc()
+        db.rollback()
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    seed_narrative()
