@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from database.connection import get_db
 from database.models import User
 from modules.gamification.daily_rewards import daily_reward_service
+from modules.gamification.besitos import besitos_service
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +31,21 @@ async def daily_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         
+        logger.info(f"Processing daily reward for user {db_user.id} (telegram: {user.id})")
+        
         # Claim daily reward
         amount = daily_reward_service.claim_daily_reward(db_user.id)
+        logger.info(f"Daily reward claim result: {amount}")
         
         if amount is not None:
             # Success message
+            current_balance = besitos_service.get_balance(db_user.id)
+            logger.info(f"Current balance after reward: {current_balance}")
+            
             success_text = (
                 f"🎉 *¡Recompensa Diaria Reclamada!*\n\n"
                 f"💋 Has recibido **{amount} besitos**\n\n"
-                f"💰 *Nuevo balance:* **{daily_reward_service.besitos_service.get_balance(db_user.id)}** 💋\n\n"
+                f"💰 *Nuevo balance:* **{current_balance}** 💋\n\n"
                 f"⏰ *Próxima recompensa:* Mañana a esta misma hora\n\n"
                 f"💡 *Consejo:* Vuelve cada día para acumular más besitos!"
             )
@@ -47,6 +54,7 @@ async def daily_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         else:
             # Already claimed today
+            logger.info(f"User {db_user.id} already claimed daily reward")
             next_claim = daily_reward_service.get_next_claim_time(db_user.id)
             
             if next_claim:

@@ -109,3 +109,59 @@ class Transaction(Base):
 
     def __repr__(self):
         return f"<Transaction(user_id={self.user_id}, amount={self.amount}, type={self.transaction_type})>"
+
+
+class Item(Base):
+    """Item model for the inventory system"""
+    __tablename__ = "items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_key = Column(String(100), unique=True, nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    item_type = Column(String(50), nullable=False)  # 'narrative_key', 'collectible', 'power_up', 'consumable'
+    rarity = Column(String(50), default='common')  # 'common', 'rare', 'epic', 'legendary'
+    price_besitos = Column(Integer, default=0)
+    item_metadata = Column(JSON, nullable=True)  # effects, requirements, etc.
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<Item(item_key={self.item_key}, name={self.name}, type={self.item_type})>"
+
+    def to_dict(self):
+        """Convert item to dictionary for API responses"""
+        return {
+            "id": self.id,
+            "item_key": self.item_key,
+            "name": self.name,
+            "description": self.description,
+            "item_type": self.item_type,
+            "rarity": self.rarity,
+            "price_besitos": self.price_besitos,
+            "metadata": self.metadata,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
+
+
+class UserInventory(Base):
+    """User inventory model for storing user items"""
+    __tablename__ = "user_inventory"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    item_id = Column(Integer, nullable=False, index=True)
+    quantity = Column(Integer, default=1)
+    acquired_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<UserInventory(user_id={self.user_id}, item_id={self.item_id}, quantity={self.quantity})>"
+
+    def to_dict(self):
+        """Convert inventory entry to dictionary"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "item_id": self.item_id,
+            "quantity": self.quantity,
+            "acquired_at": self.acquired_at.isoformat() if hasattr(self.acquired_at, 'isoformat') else None
+        }
