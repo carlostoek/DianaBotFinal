@@ -340,3 +340,35 @@ class UserAchievement(Base):
             "unlocked_at": self.unlocked_at.isoformat() if hasattr(self.unlocked_at, 'isoformat') else None,
             "progress": self.progress
         }
+
+
+class Subscription(Base):
+    """Subscription model for VIP users"""
+    __tablename__ = "subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    subscription_type = Column(String(50), nullable=False)  # 'monthly', 'yearly', 'lifetime'
+    start_date = Column(DateTime(timezone=True), nullable=False)
+    end_date = Column(DateTime(timezone=True), nullable=False)
+    status = Column(String(50), nullable=False)  # 'active', 'expired', 'cancelled'
+    payment_reference = Column(String(255), nullable=True)
+    auto_renew = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<Subscription(user_id={self.user_id}, type={self.subscription_type}, status={self.status})>"
+
+    def to_dict(self):
+        """Convert subscription to dictionary"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "subscription_type": self.subscription_type,
+            "start_date": self.start_date.isoformat() if hasattr(self.start_date, 'isoformat') else None,
+            "end_date": self.end_date.isoformat() if hasattr(self.end_date, 'isoformat') else None,
+            "status": self.status,
+            "payment_reference": self.payment_reference,
+            "auto_renew": self.auto_renew,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
