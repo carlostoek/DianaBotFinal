@@ -40,12 +40,11 @@ async def story_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         
-        # Build response
+        # Build response with interactive keyboard
         response = "📖 **Niveles Narrativos Disponibles**\n\n"
         
         for level in available_levels:
-            vip_status = " 🔒 VIP" if level.is_vip else ""
-            response += f"**{level.title}**{vip_status}\n"
+            response += f"**{level.title}**\n"
             response += f"   {level.description}\n"
             
             # Show unlock conditions if not yet unlocked
@@ -63,9 +62,13 @@ async def story_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             response += "\n"
         
-        response += "\n💡 Usa /continue para comenzar o continuar una historia."
+        response += "\n💡 Selecciona una historia para comenzar:"
         
-        await update.message.reply_text(response, parse_mode='Markdown')
+        # Create interactive keyboard for level selection
+        from bot.keyboards.narrative_keyboards import get_level_selection_keyboard
+        keyboard = get_level_selection_keyboard(available_levels)
+        
+        await update.message.reply_text(response, reply_markup=keyboard, parse_mode='Markdown')
         
     except Exception as e:
         logger.error(f"Error in story command: {e}")

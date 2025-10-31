@@ -221,3 +221,121 @@ class UserNarrativeProgress(Base):
 
     def __repr__(self):
         return f"<UserNarrativeProgress(user_id={self.user_id}, fragment_id={self.fragment_id})>"
+
+
+class Mission(Base):
+    """Mission model for gamification system"""
+    __tablename__ = "missions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    mission_key = Column(String(100), unique=True, nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    mission_type = Column(String(50), nullable=False)  # 'daily', 'weekly', 'narrative', 'special'
+    recurrence = Column(String(50), nullable=False)  # 'once', 'daily', 'weekly'
+    requirements = Column(JSON, nullable=False)  # qué debe hacer el usuario
+    rewards = Column(JSON, nullable=False)  # besitos, items, achievements
+    expiry_date = Column(DateTime(timezone=True), nullable=True)  # para misiones temporales
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<Mission(mission_key={self.mission_key}, title={self.title}, type={self.mission_type})>"
+
+    def to_dict(self):
+        """Convert mission to dictionary for API responses"""
+        return {
+            "id": self.id,
+            "mission_key": self.mission_key,
+            "title": self.title,
+            "description": self.description,
+            "mission_type": self.mission_type,
+            "recurrence": self.recurrence,
+            "requirements": self.requirements,
+            "rewards": self.rewards,
+            "expiry_date": self.expiry_date.isoformat() if self.expiry_date else None,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
+
+
+class UserMission(Base):
+    """User mission progress tracking"""
+    __tablename__ = "user_missions"
+
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    mission_id = Column(Integer, ForeignKey("missions.id"), primary_key=True)
+    status = Column(String(50), nullable=False)  # 'active', 'completed', 'expired'
+    progress = Column(JSON, nullable=True)  # progreso actual hacia requisitos
+    assigned_at = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    def __repr__(self):
+        return f"<UserMission(user_id={self.user_id}, mission_id={self.mission_id}, status={self.status})>"
+
+    def to_dict(self):
+        """Convert user mission to dictionary"""
+        return {
+            "user_id": self.user_id,
+            "mission_id": self.mission_id,
+            "status": self.status,
+            "progress": self.progress,
+            "assigned_at": self.assigned_at.isoformat() if hasattr(self.assigned_at, 'isoformat') else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None
+        }
+
+
+class Achievement(Base):
+    """Achievement model for gamification system"""
+    __tablename__ = "achievements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    achievement_key = Column(String(100), unique=True, nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    icon_emoji = Column(String(50), nullable=True)
+    points = Column(Integer, default=0)
+    reward_besitos = Column(Integer, default=0)
+    reward_item_id = Column(Integer, ForeignKey("items.id"), nullable=True)
+    unlock_conditions = Column(JSON, nullable=False)  # criterios para desbloquear
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<Achievement(achievement_key={self.achievement_key}, name={self.name})>"
+
+    def to_dict(self):
+        """Convert achievement to dictionary for API responses"""
+        return {
+            "id": self.id,
+            "achievement_key": self.achievement_key,
+            "name": self.name,
+            "description": self.description,
+            "icon_emoji": self.icon_emoji,
+            "points": self.points,
+            "reward_besitos": self.reward_besitos,
+            "reward_item_id": self.reward_item_id,
+            "unlock_conditions": self.unlock_conditions,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
+
+
+class UserAchievement(Base):
+    """User achievement progress tracking"""
+    __tablename__ = "user_achievements"
+
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    achievement_id = Column(Integer, ForeignKey("achievements.id"), primary_key=True)
+    unlocked_at = Column(DateTime(timezone=True), server_default=func.now())
+    progress = Column(JSON, nullable=True)  # para logros progresivos
+
+    def __repr__(self):
+        return f"<UserAchievement(user_id={self.user_id}, achievement_id={self.achievement_id})>"
+
+    def to_dict(self):
+        """Convert user achievement to dictionary"""
+        return {
+            "user_id": self.user_id,
+            "achievement_id": self.achievement_id,
+            "unlocked_at": self.unlocked_at.isoformat() if hasattr(self.unlocked_at, 'isoformat') else None,
+            "progress": self.progress
+        }

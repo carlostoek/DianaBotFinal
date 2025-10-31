@@ -9,15 +9,15 @@
 - Fase 5 completada
 - Fase 6 completada
 - Fase 7 completada
+- Fase 8 completada
+- Fase 9 completada
 
 ## Fase Actual
 
-**Fase 8** - Por implementar
+**Fase 10** - Por implementar
 
 ## Próximas Fases
 
-- Fase 8
-- Fase 9
 - Fase 10
 - Fase 11
 - Fase 12
@@ -32,4 +32,4 @@
 - Fase 21
 
 ---
-*Última actualización: Fase 7 completada - Sistema de Desbloqueos*
+*Última actualización: Fase 9 completada - Sistema de Achievements*

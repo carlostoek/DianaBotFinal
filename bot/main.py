@@ -2,12 +2,16 @@ import logging
 import sys
 import os
 import threading
+from datetime import datetime, time as dt_time
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from config.settings import settings
+from database.connection import get_db
+from database.models import User
+from modules.gamification.missions import mission_service
 
 # Import handlers
 from bot.handlers.start import start_handler
@@ -28,6 +32,12 @@ from bot.commands.continue_story import continue_command
 from bot.commands.choices import choices_command
 from bot.commands.progress import progress_command
 
+# Import missions command
+from bot.commands.missions import missions_command
+
+# Import achievements command
+from bot.commands.achievements import achievements_command
+
 # Import narrative handlers
 from bot.handlers.narrative import register_narrative_handlers
 
@@ -43,6 +53,25 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def assign_daily_missions_to_all_users(context):
+    """Assign daily missions to all active users"""
+    try:
+        db = next(get_db())
+        
+        # Get all active users
+        users = db.query(User).all()
+        
+        assigned_count = 0
+        for user in users:
+            if mission_service.assign_daily_missions(user.id):
+                assigned_count += 1
+        
+        logger.info(f"Assigned daily missions to {assigned_count} users")
+        
+    except Exception as e:
+        logger.error(f"Error assigning daily missions: {e}")
+
+
 def main():
     """Main function to run the bot"""
     # Setup event handlers
@@ -54,6 +83,16 @@ def main():
     
     # Create the Application
     application = Application.builder().token(settings.telegram_bot_token).build()
+    
+    # Setup daily mission assignment job (runs every day at 00:00)
+    job_queue = application.job_queue
+    if job_queue:
+        job_queue.run_daily(
+            assign_daily_missions_to_all_users,
+            time=dt_time(hour=0, minute=0),
+            name="daily_missions_assignment"
+        )
+        logger.info("Daily mission assignment job scheduled")
 
     # Add handlers
     application.add_handler(CommandHandler("start", start_handler))
@@ -74,6 +113,12 @@ def main():
     application.add_handler(CommandHandler("continue", continue_command))
     application.add_handler(CommandHandler("choices", choices_command))
     application.add_handler(CommandHandler("progress", progress_command))
+
+    # Add missions command
+    application.add_handler(CommandHandler("missions", missions_command))
+
+    # Add achievements command
+    application.add_handler(CommandHandler("achievements", achievements_command))
 
     # Register narrative callback handlers
     register_narrative_handlers(application)
