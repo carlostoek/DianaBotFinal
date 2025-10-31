@@ -59,15 +59,15 @@
 - **Fase 16 completada** - Configuration Manager
 - **Fase 17 completada** - API REST (FastAPI)
 - **Fase 18 completada** - Dashboard Web Básico
+- **Fase 19 completada** - Sistema de Subastas
 - **Database Fix**: telegram_id column type fixed (INTEGER → BIGINT)
 
 ## Fase Actual
 
-**Fase 19** - Sistema de Subastas
+**Fase 20** - Integración de Pagos (NO IMPLEMENTAR - Nota: No implementar integración de pagos real)
 
 ## Próximas Fases
 
-- Fase 19 - Sistema de Subastas
 - Fase 20 - Integración de Pagos (NO IMPLEMENTAR - Nota: No implementar integración de pagos real)
 - Fase 21 - Fragmentos Secretos
 

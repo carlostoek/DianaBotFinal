@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     redis_host: str = "localhost"
     redis_port: int = 6379
     redis_db: int = 0
+    redis_url: str = "redis://localhost:6379/0"
     
     # API
     api_host: str = "0.0.0.0"
