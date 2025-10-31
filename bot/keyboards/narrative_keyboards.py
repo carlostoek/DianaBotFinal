@@ -13,9 +13,9 @@ def get_level_selection_keyboard(levels):
         callback_data = f"narrative:start:{level.level_key}"
         button_text = f"📖 {level.title}"
         
-        # Add VIP indicator if applicable
-        if hasattr(level, 'is_vip') and level.is_vip:
-            button_text += " 🔒"
+        # Add VIP indicator if applicable (placeholder for future VIP system)
+        # if hasattr(level, 'is_vip') and level.is_vip:
+        #     button_text += " 🔒"
         
         keyboard.append([
             InlineKeyboardButton(button_text, callback_data=callback_data)

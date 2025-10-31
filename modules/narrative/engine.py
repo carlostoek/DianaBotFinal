@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from database.connection import get_db, get_mongo
 from database.models import NarrativeLevel, NarrativeFragment, UserNarrativeProgress, User
 from modules.narrative.unlocks import UnlockEngine
+from modules.narrative.flags import set_narrative_flag, get_narrative_flag, get_all_narrative_flags
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ class NarrativeEngine:
         self.mongo_db = get_mongo()
         self.narrative_content = self.mongo_db.narrative_content
         self.user_states = self.mongo_db.user_narrative_states
+        self.unlock_engine = UnlockEngine()
         self.unlock_engine = UnlockEngine()
     
     @staticmethod
@@ -43,7 +45,8 @@ class NarrativeEngine:
             
             for level in levels:
                 # Check if level is unlocked for user
-                is_unlocked = NarrativeEngine._check_unlock_conditions(user.id, level.unlock_conditions)
+                unlock_engine = UnlockEngine()
+                is_unlocked = unlock_engine.evaluate_conditions(user.id, level.unlock_conditions)
                 
                 if is_unlocked:
                     available_levels.append(level)
@@ -198,26 +201,21 @@ class NarrativeEngine:
     def _update_user_narrative_state(self, user_id: int, narrative_flags: List[str], rewards: Dict[str, Any]):
         """Update user narrative state with new flags and rewards"""
         try:
-            current_state = self.get_user_narrative_state(user_id)
-            
-            # Add new flags
-            current_flags = current_state.get("narrative_flags", [])
+            # Set narrative flags using our new system
             for flag in narrative_flags:
-                if flag not in current_flags:
-                    current_flags.append(flag)
+                set_narrative_flag(user_id, flag, True)
             
-            # Update rewards
+            # Update rewards in MongoDB state
             if "besitos" in rewards:
+                current_state = self.get_user_narrative_state(user_id)
                 current_state["total_besitos_earned"] = current_state.get("total_besitos_earned", 0) + rewards["besitos"]
-            
-            # Update in MongoDB
-            self.user_states.update_one(
-                {"user_id": user_id},
-                {"$set": {
-                    "narrative_flags": current_flags,
-                    "total_besitos_earned": current_state.get("total_besitos_earned", 0)
-                }}
-            )
+                
+                self.user_states.update_one(
+                    {"user_id": user_id},
+                    {"$set": {
+                        "total_besitos_earned": current_state.get("total_besitos_earned", 0)
+                    }}
+                )
             
         except Exception as e:
             logger.error(f"Failed to update narrative state for user {user_id}: {e}")
@@ -227,6 +225,10 @@ class NarrativeEngine:
         visible_if = decision.get("visible_if")
         if not visible_if:
             return True
+        
+        user_id = user_state.get("user_id")
+        if not user_id:
+            return False
         
         # Check item requirements
         if "has_item" in visible_if:
@@ -238,9 +240,8 @@ class NarrativeEngine:
         # Check narrative flags
         if "narrative_flags" in visible_if:
             required_flags = visible_if["narrative_flags"]
-            user_flags = user_state.get("narrative_flags", [])
             for flag in required_flags:
-                if flag not in user_flags:
+                if not get_narrative_flag(user_id, flag, False):
                     return False
         
         # Check variable conditions
@@ -315,40 +316,8 @@ class NarrativeEngine:
     @staticmethod
     def _check_unlock_conditions(user_id: int, conditions: Optional[Dict[str, Any]]) -> bool:
         """Check if user meets unlock conditions"""
-        if not conditions:
-            return True
-        
-        # Check besitos requirement
-        if "min_besitos" in conditions:
-            # TODO: Integrate with besitos system
-            # For now, assume user has enough besitos
-            pass
-        
-        # Check items requirement
-        if "required_items" in conditions:
-            # TODO: Integrate with inventory system
-            # For now, assume user has required items
-            pass
-        
-        # Check previous fragments requirement
-        if "required_fragments" in conditions:
-            db: Session = next(get_db())
-            try:
-                for fragment_key in conditions["required_fragments"]:
-                    fragment = db.query(NarrativeFragment).filter(
-                        NarrativeFragment.fragment_key == fragment_key
-                    ).first()
-                    if fragment:
-                        progress = db.query(UserNarrativeProgress).filter(
-                            UserNarrativeProgress.user_id == user_id,
-                            UserNarrativeProgress.fragment_id == fragment.id
-                        ).first()
-                        if not progress:
-                            return False
-            finally:
-                db.close()
-        
-        return True
+        unlock_engine = UnlockEngine()
+        return unlock_engine.evaluate_conditions(user_id, conditions)
     
     def start_story(self, user: User, level_key: str) -> Optional[Dict[str, Any]]:
         """Start a new story for user
@@ -380,6 +349,17 @@ class NarrativeEngine:
             if not first_fragment:
                 logger.error(f"No fragments found for level {level_key}")
                 return None
+            
+            # Check if user can access the first fragment
+            access_status = self.check_fragment_access(int(user.id), str(first_fragment.fragment_key))
+            
+            if not access_status["unlocked"]:
+                logger.info(f"User {user.id} cannot access fragment {first_fragment.fragment_key}: {access_status['reason']}")
+                return {
+                    "error": "access_denied",
+                    "reason": access_status["reason"],
+                    "missing_requirements": access_status.get("missing_requirements", [])
+                }
             
             # Record user progress
             progress = UserNarrativeProgress(
