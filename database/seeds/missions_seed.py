@@ -63,6 +63,26 @@ def seed_missions():
                 "requirements": {"narrative_level": 2},
                 "rewards": {"besitos": 50, "items": ["key_mansion_garden"]},
                 "is_active": True
+            },
+            {
+                "mission_key": "daily_react_to_posts",
+                "title": "Reaccionario",
+                "description": "Reacciona a 3 posts en el canal",
+                "mission_type": "daily",
+                "recurrence": "daily",
+                "requirements": {"react_to_posts": 3},
+                "rewards": {"besitos": 15},
+                "is_active": True
+            },
+            {
+                "mission_key": "weekly_heart_reactor",
+                "title": "Corazón de Oro",
+                "description": "Reacciona con ❤️ a 10 posts esta semana",
+                "mission_type": "weekly",
+                "recurrence": "weekly",
+                "requirements": {"react_❤️_count": 10},
+                "rewards": {"besitos": 75},
+                "is_active": True
             }
         ]
         

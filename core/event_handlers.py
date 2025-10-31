@@ -48,8 +48,8 @@ def update_user_activity_handler(event: Dict[str, Any]) -> None:
             return
             
         if user:
-            from sqlalchemy import func
-            user.last_active = func.now()
+            from datetime import datetime
+            user.last_active = datetime.now()
             db.commit()
             logger.debug(f"Updated last_active for user: {user.telegram_id}")
             
@@ -155,7 +155,8 @@ def achievement_detection_handler(event: Dict[str, Any]) -> None:
             'gamification.besitos_earned',
             'gamification.item_acquired',
             'gamification.mission_completed',
-            'gamification.daily_reward_claimed'
+            'gamification.daily_reward_claimed',
+            'admin.reaction_added'
         ]:
             unlocked_achievements = achievement_service.check_all_achievements(user_id)
             
@@ -164,6 +165,46 @@ def achievement_detection_handler(event: Dict[str, Any]) -> None:
                 
     except Exception as e:
         logger.error(f"Failed to detect achievements: {e}")
+
+
+def reaction_tracking_handler(event: Dict[str, Any]) -> None:
+    """Handler for tracking reaction-based mission progress"""
+    try:
+        event_data = event['data']
+        user_id = event_data.get('user_id')
+        
+        if not user_id:
+            return
+        
+        # Import mission service here to avoid circular imports
+        from modules.gamification.missions import mission_service
+        
+        # Get active missions for user
+        active_missions = mission_service.get_active_missions(user_id)
+        
+        for mission in active_missions:
+            mission_id = mission['id']
+            requirements = mission.get('requirements', {})
+            
+            # Check if this event contributes to any mission requirements
+            progress_updates = {}
+            
+            # Track general reactions
+            if event['type'] == 'admin.reaction_added':
+                if 'react_to_posts' in requirements:
+                    progress_updates['react_to_posts'] = 1
+                
+                # Track specific emoji reactions
+                emoji = event_data.get('emoji')
+                if emoji and f'react_{emoji}_count' in requirements:
+                    progress_updates[f'react_{emoji}_count'] = 1
+            
+            # Update mission progress if there are relevant updates
+            if progress_updates:
+                mission_service.update_mission_progress(user_id, mission_id, progress_updates)
+                
+    except Exception as e:
+        logger.error(f"Failed to track reaction mission progress: {e}")
 
 
 def setup_event_handlers() -> None:
@@ -214,5 +255,10 @@ def setup_event_handlers() -> None:
     event_bus.subscribe("user.registered", update_user_activity_handler)
     event_bus.subscribe("user.activity", update_user_activity_handler)
     event_bus.subscribe("user.command_executed", update_user_activity_handler)
+    
+    # Reaction events
+    event_bus.subscribe("admin.reaction_added", log_event_handler)
+    event_bus.subscribe("admin.reaction_added", reaction_tracking_handler)
+    event_bus.subscribe("admin.reaction_added", achievement_detection_handler)
     
     logger.info("Event handlers setup completed")
