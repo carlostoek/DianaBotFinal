@@ -41,6 +41,9 @@ from bot.commands.achievements import achievements_command
 # Import VIP commands
 from bot.commands.vip import vip_status, vip_upgrade, vip_content
 
+# Import channel handlers
+from bot.handlers.channels import handle_new_channel_member, handle_channel_post, send_vip_invite, send_free_channel_info
+
 # Import narrative handlers
 from bot.handlers.narrative import register_narrative_handlers
 
@@ -127,6 +130,14 @@ def main():
     application.add_handler(CommandHandler("vip", vip_status))
     application.add_handler(CommandHandler("upgrade", vip_upgrade))
     application.add_handler(CommandHandler("vip_content", vip_content))
+
+    # Add channel commands
+    application.add_handler(CommandHandler("free_channel", send_free_channel_info))
+    application.add_handler(CommandHandler("vip_invite", send_vip_invite))
+
+    # Add channel event handlers
+    application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_channel_member))
+    application.add_handler(MessageHandler(filters.ChatType.CHANNEL, handle_channel_post))
 
     # Register narrative callback handlers
     register_narrative_handlers(application)
