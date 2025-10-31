@@ -147,16 +147,17 @@ async def handle_channel_invite_request(update: Update, context: ContextTypes.DE
         logger.error(f"Error handling channel invite request: {e}")
 
 
-async def send_vip_invite(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id: int):
+async def send_vip_invite(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Send VIP channel invite to a user
     
     Args:
         update: Telegram update
         context: Context
-        user_id: User ID to send invite to
     """
     try:
+        user_id = update.effective_user.id
+        
         # Check if user has active VIP subscription
         subscription = subscription_service.get_active_subscription(user_id)
         if not subscription:

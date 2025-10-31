@@ -23,6 +23,7 @@ from modules.admin.subscriptions import SubscriptionService
 from modules.admin.vip_access import VIPAccessControl
 from modules.admin.channels import ChannelService
 from modules.admin.publishing import publishing_service
+from modules.gamification.auctions import get_auction_service
 
 logger = logging.getLogger(__name__)
 
@@ -249,6 +250,58 @@ class ScheduledTasks:
         except Exception as e:
             logger.error(f"Error in publish_scheduled_posts: {e}")
             return {'published': 0, 'failed': 0, 'total': 0, 'error': str(e)}
+    
+    def close_expired_auctions(self) -> dict:
+        """
+        Close auctions that have expired
+        Returns auction closing statistics
+        """
+        try:
+            auction_service = get_auction_service()
+            
+            # Get active auctions that should be closed
+            active_auctions = auction_service.get_active_auctions()
+            
+            closed_count = 0
+            failed_count = 0
+            results = []
+            
+            for auction in active_auctions:
+                try:
+                    # Check if auction should be closed
+                    end_time = auction.extended_end_time or auction.end_time
+                    if datetime.now() >= end_time:
+                        result = auction_service.close_auction(auction.auction_id)
+                        
+                        if result:
+                            closed_count += 1
+                            results.append({
+                                'auction_id': auction.auction_id,
+                                'status': result['status'],
+                                'winner_id': result.get('winner_id'),
+                                'winning_bid': result.get('winning_bid')
+                            })
+                            logger.info(f"Successfully closed auction {auction.auction_id}")
+                        else:
+                            failed_count += 1
+                            logger.error(f"Failed to close auction {auction.auction_id}")
+                except Exception as e:
+                    failed_count += 1
+                    logger.error(f"Error closing auction {auction.auction_id}: {e}")
+            
+            result_stats = {
+                'closed': closed_count,
+                'failed': failed_count,
+                'total_checked': len(active_auctions),
+                'results': results
+            }
+            
+            logger.info(f"Auction closing completed: {closed_count} closed, {failed_count} failed")
+            return result_stats
+                
+        except Exception as e:
+            logger.error(f"Error in close_expired_auctions: {e}")
+            return {'closed': 0, 'failed': 0, 'total_checked': 0, 'error': str(e)}
 
 
 def run_scheduled_tasks():
@@ -274,7 +327,10 @@ def run_scheduled_tasks():
     # Publish scheduled posts
     publishing_results = tasks.publish_scheduled_posts()
     
-    logger.info(f"Scheduled tasks completed: {len(expiring)} expiring, {len(expired)} expired, {len(reminders)} reminders, {len(users_to_remove)} users to remove from channels, {publishing_results['published']} posts published")
+    # Close expired auctions
+    auction_results = tasks.close_expired_auctions()
+    
+    logger.info(f"Scheduled tasks completed: {len(expiring)} expiring, {len(expired)} expired, {len(reminders)} reminders, {len(users_to_remove)} users to remove from channels, {publishing_results['published']} posts published, {auction_results['closed']} auctions closed")
     
     return {
         'expiring_subscriptions': expiring,
@@ -283,7 +339,8 @@ def run_scheduled_tasks():
         'users_to_remove_from_channels': users_to_remove,
         'welcome_messages_sent': welcome_messages,
         'channel_reports': channel_reports,
-        'publishing_results': publishing_results
+        'publishing_results': publishing_results,
+        'auction_results': auction_results
     }
 
 

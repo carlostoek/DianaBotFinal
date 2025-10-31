@@ -32,6 +32,9 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     last_active = Column(DateTime(timezone=True), server_default=func.now())
 
+    # Relationships
+    bids = relationship("Bid", back_populates="user")
+
     def __repr__(self):
         return f"<User(telegram_id={self.telegram_id}, username={self.username})>"
 
@@ -125,6 +128,9 @@ class Item(Base):
     price_besitos = Column(Integer, default=0)
     item_metadata = Column(JSON, nullable=True)  # effects, requirements, etc.
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    auctions = relationship("Auction", back_populates="item")
 
     def __repr__(self):
         return f"<Item(item_key={self.item_key}, name={self.name}, type={self.item_type})>"
@@ -614,4 +620,86 @@ class AdminUser(Base):
             "last_login": self.last_login,
             "created_at": self.created_at,
             "updated_at": self.updated_at
+        }
+
+
+class Auction(Base):
+    """Auction model for real-time item auctions"""
+    __tablename__ = "auctions"
+
+    auction_id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    auction_type = Column(String(50), nullable=False, default='standard')  # 'standard', 'dutch', 'silent'
+    start_price = Column(Integer, nullable=False)
+    current_bid = Column(Integer, nullable=False)
+    current_bidder_id = Column(BigInteger, ForeignKey("users.id"))
+    winner_id = Column(BigInteger, ForeignKey("users.id"))
+    status = Column(String(50), nullable=False, default='active')  # 'active', 'closed', 'cancelled'
+    start_time = Column(DateTime(timezone=True), server_default=func.now())
+    end_time = Column(DateTime(timezone=True), nullable=False)
+    extended_end_time = Column(DateTime(timezone=True))
+    min_bid_increment = Column(Integer, nullable=False, default=10)
+    bid_count = Column(Integer, nullable=False, default=0)
+    auction_metadata = Column(JSON, nullable=True)  # Additional auction settings
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    item = relationship("Item", back_populates="auctions")
+    current_bidder = relationship("User", foreign_keys=[current_bidder_id])
+    winner = relationship("User", foreign_keys=[winner_id])
+    bids = relationship("Bid", back_populates="auction", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<Auction(auction_id={self.auction_id}, item_id={self.item_id}, status={self.status})>"
+
+    def to_dict(self):
+        """Convert auction to dictionary"""
+        return {
+            "auction_id": self.auction_id,
+            "item_id": self.item_id,
+            "auction_type": self.auction_type,
+            "start_price": self.start_price,
+            "current_bid": self.current_bid,
+            "current_bidder_id": self.current_bidder_id,
+            "winner_id": self.winner_id,
+            "status": self.status,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "extended_end_time": self.extended_end_time,
+            "min_bid_increment": self.min_bid_increment,
+            "bid_count": self.bid_count,
+            "metadata": self.metadata,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at
+        }
+
+
+class Bid(Base):
+    """Bid model for auction bids"""
+    __tablename__ = "bids"
+
+    bid_id = Column(Integer, primary_key=True, index=True)
+    auction_id = Column(Integer, ForeignKey("auctions.auction_id"), nullable=False)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    amount = Column(Integer, nullable=False)
+    is_winning = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    auction = relationship("Auction", back_populates="bids")
+    user = relationship("User", back_populates="bids")
+
+    def __repr__(self):
+        return f"<Bid(bid_id={self.bid_id}, auction_id={self.auction_id}, user_id={self.user_id}, amount={self.amount})>"
+
+    def to_dict(self):
+        """Convert bid to dictionary"""
+        return {
+            "bid_id": self.bid_id,
+            "auction_id": self.auction_id,
+            "user_id": self.user_id,
+            "amount": self.amount,
+            "is_winning": self.is_winning,
+            "created_at": self.created_at
         }
