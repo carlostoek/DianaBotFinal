@@ -82,7 +82,7 @@ def seed_narrative():
         
         # Create narrative fragments
         fragments_data = [
-            # Level 1 fragments
+            # Level 1 fragments with branching narrative
             {
                 "fragment_key": "intro_1",
                 "level_id": level_1.id,
@@ -131,6 +131,28 @@ def seed_narrative():
                     "required_fragments": ["consequence_1_a", "consequence_1_b"]
                 },
                 "order_index": 6,
+                "is_active": True
+            },
+            
+            # Branching fragments based on narrative flags
+            {
+                "fragment_key": "trust_lucien_path",
+                "level_id": level_1.id,
+                "title": "Confianza en Lucien",
+                "unlock_conditions": {
+                    "narrative_flags": ["trusted_lucien"]
+                },
+                "order_index": 7,
+                "is_active": True
+            },
+            {
+                "fragment_key": "distrust_lucien_path",
+                "level_id": level_1.id,
+                "title": "Desconfianza en Lucien",
+                "unlock_conditions": {
+                    "narrative_flags": ["distrusted_lucien"]
+                },
+                "order_index": 8,
                 "is_active": True
             },
             
@@ -197,6 +219,110 @@ def seed_narrative():
                     "min_besitos": 100
                 },
                 "order_index": 2,
+                "is_active": True
+            },
+            
+            # Phase 10: Additional branching narrative content
+            {
+                "fragment_key": "lucien_decision",
+                "level_id": level_2.id,
+                "title": "La Propuesta de Lucien",
+                "unlock_conditions": {
+                    "required_fragments": ["intro_2"],
+                    "narrative_flags": ["trusted_lucien"]
+                },
+                "order_index": 5,
+                "is_active": True
+            },
+            {
+                "fragment_key": "lucien_betrayal",
+                "level_id": level_2.id,
+                "title": "La Traición",
+                "unlock_conditions": {
+                    "required_fragments": ["lucien_decision"],
+                    "narrative_flags": ["accepted_lucien_offer"]
+                },
+                "order_index": 6,
+                "is_active": True
+            },
+            {
+                "fragment_key": "lucien_redemption",
+                "level_id": level_2.id,
+                "title": "La Redención",
+                "unlock_conditions": {
+                    "required_fragments": ["lucien_decision"],
+                    "narrative_flags": ["rejected_lucien_offer"]
+                },
+                "order_index": 7,
+                "is_active": True
+            },
+            {
+                "fragment_key": "diana_alliance",
+                "level_id": level_2.id,
+                "title": "La Alianza con Diana",
+                "unlock_conditions": {
+                    "required_fragments": ["intro_2"],
+                    "narrative_flags": ["distrusted_lucien"]
+                },
+                "order_index": 8,
+                "is_active": True
+            },
+            {
+                "fragment_key": "neutral_path",
+                "level_id": level_2.id,
+                "title": "El Camino Neutral",
+                "unlock_conditions": {
+                    "required_fragments": ["intro_2"],
+                    "narrative_flags": []
+                },
+                "order_index": 9,
+                "is_active": True
+            },
+            
+            # Level 3 branching endings
+            {
+                "fragment_key": "lucien_ending",
+                "level_id": level_3.id,
+                "title": "Final: El Legado de Lucien",
+                "unlock_conditions": {
+                    "required_fragments": ["intro_3"],
+                    "narrative_flags": ["lucien_path_complete"]
+                },
+                "order_index": 3,
+                "is_active": True
+            },
+            {
+                "fragment_key": "diana_ending",
+                "level_id": level_3.id,
+                "title": "Final: La Verdad de Diana",
+                "unlock_conditions": {
+                    "required_fragments": ["intro_3"],
+                    "narrative_flags": ["diana_path_complete"]
+                },
+                "order_index": 4,
+                "is_active": True
+            },
+            {
+                "fragment_key": "neutral_ending",
+                "level_id": level_3.id,
+                "title": "Final: El Observador",
+                "unlock_conditions": {
+                    "required_fragments": ["intro_3"],
+                    "narrative_flags": ["neutral_path_complete"]
+                },
+                "order_index": 5,
+                "is_active": True
+            },
+            {
+                "fragment_key": "secret_ending",
+                "level_id": level_3.id,
+                "title": "Final Secreto: La Unión",
+                "unlock_conditions": {
+                    "required_fragments": ["intro_3"],
+                    "narrative_flags": ["lucien_path_complete", "diana_path_complete"],
+                    "required_items": ["llave_unificacion"]
+                },
+                "order_index": 6,
                 "is_active": True
             }
         ]

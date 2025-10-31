@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from database.connection import get_db, get_mongo
 from database.models import NarrativeLevel, NarrativeFragment, UserNarrativeProgress, User
 from modules.narrative.unlocks import UnlockEngine
+from modules.narrative.flags import set_narrative_flag, get_narrative_flag, get_all_narrative_flags
 
 logger = logging.getLogger(__name__)
 
@@ -200,26 +201,21 @@ class NarrativeEngine:
     def _update_user_narrative_state(self, user_id: int, narrative_flags: List[str], rewards: Dict[str, Any]):
         """Update user narrative state with new flags and rewards"""
         try:
-            current_state = self.get_user_narrative_state(user_id)
-            
-            # Add new flags
-            current_flags = current_state.get("narrative_flags", [])
+            # Set narrative flags using our new system
             for flag in narrative_flags:
-                if flag not in current_flags:
-                    current_flags.append(flag)
+                set_narrative_flag(user_id, flag, True)
             
-            # Update rewards
+            # Update rewards in MongoDB state
             if "besitos" in rewards:
+                current_state = self.get_user_narrative_state(user_id)
                 current_state["total_besitos_earned"] = current_state.get("total_besitos_earned", 0) + rewards["besitos"]
-            
-            # Update in MongoDB
-            self.user_states.update_one(
-                {"user_id": user_id},
-                {"$set": {
-                    "narrative_flags": current_flags,
-                    "total_besitos_earned": current_state.get("total_besitos_earned", 0)
-                }}
-            )
+                
+                self.user_states.update_one(
+                    {"user_id": user_id},
+                    {"$set": {
+                        "total_besitos_earned": current_state.get("total_besitos_earned", 0)
+                    }}
+                )
             
         except Exception as e:
             logger.error(f"Failed to update narrative state for user {user_id}: {e}")
@@ -229,6 +225,10 @@ class NarrativeEngine:
         visible_if = decision.get("visible_if")
         if not visible_if:
             return True
+        
+        user_id = user_state.get("user_id")
+        if not user_id:
+            return False
         
         # Check item requirements
         if "has_item" in visible_if:
@@ -240,9 +240,8 @@ class NarrativeEngine:
         # Check narrative flags
         if "narrative_flags" in visible_if:
             required_flags = visible_if["narrative_flags"]
-            user_flags = user_state.get("narrative_flags", [])
             for flag in required_flags:
-                if flag not in user_flags:
+                if not get_narrative_flag(user_id, flag, False):
                     return False
         
         # Check variable conditions

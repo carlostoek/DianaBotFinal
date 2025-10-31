@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, JSON, ForeignKey
+from sqlalchemy import Column, Integer, BigInteger, String, DateTime, Boolean, Text, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database.connection import Base
@@ -9,7 +9,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    telegram_id = Column(Integer, unique=True, index=True, nullable=False)
+    telegram_id = Column(BigInteger, unique=True, index=True, nullable=False)
     username = Column(String(255), nullable=True)
     first_name = Column(String(255), nullable=False)
     last_name = Column(String(255), nullable=True)
@@ -62,7 +62,7 @@ class EventLog(Base):
     event_type = Column(String(100), nullable=False, index=True)
     event_data = Column(JSON, nullable=False)
     user_id = Column(Integer, nullable=True, index=True)
-    telegram_id = Column(Integer, nullable=True, index=True)
+    telegram_id = Column(BigInteger, nullable=True, index=True)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -214,6 +214,7 @@ class UserNarrativeProgress(Base):
     fragment_id = Column(Integer, ForeignKey("narrative_fragments.id"), primary_key=True)
     completed_at = Column(DateTime(timezone=True), server_default=func.now())
     choices_made = Column(JSON, nullable=True)  # decisiones tomadas en este fragmento
+    narrative_flags = Column(JSON, nullable=True)  # flags narrativos acumulados
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships

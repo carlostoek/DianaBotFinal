@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from database.connection import get_db
 from database.models import User
 from modules.narrative.engine import NarrativeEngine
+from modules.narrative.flags import get_all_narrative_flags
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +43,30 @@ async def progress_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         
+        # Get narrative flags to show branching decisions
+        narrative_flags = get_all_narrative_flags(user.id)
+        
         # Build progress response
         response = "🗺️ **Tu Progreso Narrativo**\n\n"
+        
+        # Show important decisions taken
+        if narrative_flags:
+            response += "🎭 **Decisiones Importantes:**\n"
+            important_flags = [
+                ("trusted_lucien", "Confiaste en Lucien"),
+                ("distrusted_lucien", "Desconfiaste de Lucien"),
+                ("accepted_lucien_offer", "Aceptaste la oferta de Lucien"),
+                ("rejected_lucien_offer", "Rechazaste la oferta de Lucien"),
+                ("lucien_path_complete", "Completaste el camino de Lucien"),
+                ("diana_path_complete", "Completaste el camino de Diana"),
+                ("neutral_path_complete", "Completaste el camino neutral"),
+            ]
+            
+            for flag_key, flag_description in important_flags:
+                if narrative_flags.get(flag_key):
+                    response += f"   ✅ {flag_description}\n"
+            
+            response += "\n"
         
         for level in available_levels:
             response += f"📖 **{level.title}**\n"

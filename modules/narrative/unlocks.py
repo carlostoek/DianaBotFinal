@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.models import User, UserNarrativeProgress, UserBalance, NarrativeFragment
+from modules.narrative.flags import get_narrative_flag, has_narrative_flags
 
 logger = logging.getLogger(__name__)
 
@@ -138,10 +139,7 @@ class UnlockEngine:
     
     def _check_narrative_flags(self, user_id: int, flags_required: List[str]) -> bool:
         """Check if user has required narrative flags"""
-        # TODO: Integrate with narrative state system
-        # For now, assume user has the flags
-        logger.info(f"Narrative flags check for user {user_id}: {flags_required}")
-        return True
+        return has_narrative_flags(user_id, flags_required)
     
     def get_missing_requirements(self, user_id: int, conditions: Optional[Dict[str, Any]]) -> List[str]:
         """
@@ -203,7 +201,10 @@ class UnlockEngine:
         
         # Check narrative flags
         if "narrative_flags" in conditions:
-            missing.append("progreso narrativo específico")
+            flags_required = conditions["narrative_flags"]
+            for flag in flags_required:
+                if not get_narrative_flag(user_id, flag, False):
+                    missing.append(f"flag narrativo: {flag}")
         
         return missing
     
