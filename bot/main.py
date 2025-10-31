@@ -44,6 +44,9 @@ from bot.commands.trivia import register_trivia_commands
 # Import VIP commands
 from bot.commands.vip import vip_status, vip_upgrade, vip_content
 
+# Import secret commands
+from bot.commands.secrets import secret_command, secrets_command, hint_command
+
 # Import channel handlers
 from bot.handlers.channels import handle_new_channel_member, handle_channel_post, send_vip_invite, send_free_channel_info
 
@@ -148,6 +151,11 @@ def main():
     # Add channel commands
     application.add_handler(CommandHandler("free_channel", send_free_channel_info))
     application.add_handler(CommandHandler("vip_invite", send_vip_invite))
+
+    # Add secret commands
+    application.add_handler(CommandHandler("secret", secret_command))
+    application.add_handler(CommandHandler("secrets", secrets_command))
+    application.add_handler(CommandHandler("hint", hint_command))
 
     # Add channel event handlers
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_channel_member))

@@ -75,6 +75,16 @@ def seed_achievements():
                 "reward_besitos": 150,
                 "reward_item_id": None,
                 "unlock_conditions": {"narrative_level": 1}
+            },
+            {
+                "achievement_key": "secret_master",
+                "name": "Maestro de Secretos",
+                "description": "Descubre todos los secretos ocultos",
+                "icon_emoji": "💎",
+                "points": 50,
+                "reward_besitos": 500,
+                "reward_item_id": None,
+                "unlock_conditions": {"secrets_discovered": 5}
             }
         ]
         

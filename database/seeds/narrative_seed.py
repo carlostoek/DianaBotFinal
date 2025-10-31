@@ -414,6 +414,63 @@ def seed_narrative():
                 },
                 "order_index": 5,
                 "is_active": True
+            },
+            
+            # Secret fragments (Phase 21)
+            {
+                "fragment_key": "lucien_backstory",
+                "level_id": level_2.id,
+                "title": "El Pasado de Lucien",
+                "unlock_conditions": {
+                    "secret_code_required": True
+                },
+                "order_index": 10,
+                "is_active": True,
+                "is_secret": True
+            },
+            {
+                "fragment_key": "prophecy_revealed",
+                "level_id": level_2.id,
+                "title": "La Profecía Revelada",
+                "unlock_conditions": {
+                    "secret_code_required": True
+                },
+                "order_index": 11,
+                "is_active": True,
+                "is_secret": True
+            },
+            {
+                "fragment_key": "hidden_chamber",
+                "level_id": level_3.id,
+                "title": "La Cámara Oculta",
+                "unlock_conditions": {
+                    "secret_code_required": True
+                },
+                "order_index": 7,
+                "is_active": True,
+                "is_secret": True
+            },
+            {
+                "fragment_key": "alternate_ending",
+                "level_id": level_3.id,
+                "title": "Final Alternativo",
+                "unlock_conditions": {
+                    "secret_code_required": True
+                },
+                "order_index": 8,
+                "is_active": True,
+                "is_secret": True
+            },
+            {
+                "fragment_key": "character_secret",
+                "level_id": level_4.id,
+                "title": "El Secreto del Personaje",
+                "unlock_conditions": {
+                    "secret_code_required": True
+                },
+                "order_index": 6,
+                "is_active": True,
+                "is_secret": True
             }
         ]
         
