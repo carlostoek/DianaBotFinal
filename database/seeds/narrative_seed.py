@@ -76,6 +76,10 @@ def seed_narrative():
         level_2 = db.query(NarrativeLevel).filter(NarrativeLevel.level_key == "level_2_forest").first()
         level_3 = db.query(NarrativeLevel).filter(NarrativeLevel.level_key == "level_3_attic").first()
         
+        if not all([level_1, level_2, level_3]):
+            print("❌ Error: Some levels not found")
+            return
+        
         # Create narrative fragments
         fragments_data = [
             # Level 1 fragments
@@ -158,6 +162,41 @@ def seed_narrative():
                     "required_items": ["llave_attico"]
                 },
                 "order_index": 1,
+                "is_active": True
+            },
+            
+            # Additional fragments with specific requirements for Phase 7
+            {
+                "fragment_key": "secret_chamber",
+                "level_id": level_2.id,
+                "title": "La Cámara Secreta",
+                "unlock_conditions": {
+                    "min_besitos": 50,
+                    "required_fragments": ["intro_2"]
+                },
+                "order_index": 3,
+                "is_active": True
+            },
+            {
+                "fragment_key": "ancient_treasure",
+                "level_id": level_2.id,
+                "title": "Tesoro Ancestral",
+                "unlock_conditions": {
+                    "min_besitos": 50,
+                    "required_items": ["mapa_tesoro"]
+                },
+                "order_index": 4,
+                "is_active": True
+            },
+            {
+                "fragment_key": "final_revelation",
+                "level_id": level_3.id,
+                "title": "La Revelación Final",
+                "unlock_conditions": {
+                    "required_fragments": ["secret_chamber", "ancient_treasure"],
+                    "min_besitos": 100
+                },
+                "order_index": 2,
                 "is_active": True
             }
         ]

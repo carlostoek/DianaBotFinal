@@ -20,6 +20,7 @@ class NarrativeEngine:
         self.narrative_content = self.mongo_db.narrative_content
         self.user_states = self.mongo_db.user_narrative_states
         self.unlock_engine = UnlockEngine()
+        self.unlock_engine = UnlockEngine()
     
     @staticmethod
     def get_available_levels(user: User) -> List[NarrativeLevel]:
@@ -43,7 +44,8 @@ class NarrativeEngine:
             
             for level in levels:
                 # Check if level is unlocked for user
-                is_unlocked = NarrativeEngine._check_unlock_conditions(user.id, level.unlock_conditions)
+                unlock_engine = UnlockEngine()
+                is_unlocked = unlock_engine.evaluate_conditions(user.id, level.unlock_conditions)
                 
                 if is_unlocked:
                     available_levels.append(level)
@@ -315,40 +317,8 @@ class NarrativeEngine:
     @staticmethod
     def _check_unlock_conditions(user_id: int, conditions: Optional[Dict[str, Any]]) -> bool:
         """Check if user meets unlock conditions"""
-        if not conditions:
-            return True
-        
-        # Check besitos requirement
-        if "min_besitos" in conditions:
-            # TODO: Integrate with besitos system
-            # For now, assume user has enough besitos
-            pass
-        
-        # Check items requirement
-        if "required_items" in conditions:
-            # TODO: Integrate with inventory system
-            # For now, assume user has required items
-            pass
-        
-        # Check previous fragments requirement
-        if "required_fragments" in conditions:
-            db: Session = next(get_db())
-            try:
-                for fragment_key in conditions["required_fragments"]:
-                    fragment = db.query(NarrativeFragment).filter(
-                        NarrativeFragment.fragment_key == fragment_key
-                    ).first()
-                    if fragment:
-                        progress = db.query(UserNarrativeProgress).filter(
-                            UserNarrativeProgress.user_id == user_id,
-                            UserNarrativeProgress.fragment_id == fragment.id
-                        ).first()
-                        if not progress:
-                            return False
-            finally:
-                db.close()
-        
-        return True
+        unlock_engine = UnlockEngine()
+        return unlock_engine.evaluate_conditions(user_id, conditions)
     
     def start_story(self, user: User, level_key: str) -> Optional[Dict[str, Any]]:
         """Start a new story for user
@@ -380,6 +350,17 @@ class NarrativeEngine:
             if not first_fragment:
                 logger.error(f"No fragments found for level {level_key}")
                 return None
+            
+            # Check if user can access the first fragment
+            access_status = self.check_fragment_access(int(user.id), str(first_fragment.fragment_key))
+            
+            if not access_status["unlocked"]:
+                logger.info(f"User {user.id} cannot access fragment {first_fragment.fragment_key}: {access_status['reason']}")
+                return {
+                    "error": "access_denied",
+                    "reason": access_status["reason"],
+                    "missing_requirements": access_status.get("missing_requirements", [])
+                }
             
             # Record user progress
             progress = UserNarrativeProgress(

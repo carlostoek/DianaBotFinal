@@ -8,10 +8,11 @@
 - Fase 4 completada
 - Fase 5 completada
 - Fase 6 completada
+- Fase 7 completada
 
 ## Fase Actual
 
-**Fase 7** - Por implementar
+**Fase 8** - Por implementar
 
 ## Próximas Fases
 
@@ -31,4 +32,4 @@
 - Fase 21
 
 ---
-*Última actualización: Fase 6 completada - Motor de Narrativa Core con MongoDB*
+*Última actualización: Fase 7 completada - Sistema de Desbloqueos*

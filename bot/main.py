@@ -26,6 +26,7 @@ from bot.commands.inventory import inventory_handler, item_handler
 from bot.commands.story import story_command
 from bot.commands.continue_story import continue_command
 from bot.commands.choices import choices_command
+from bot.commands.progress import progress_command
 
 # Import narrative handlers
 from bot.handlers.narrative import register_narrative_handlers
@@ -72,6 +73,7 @@ def main():
     application.add_handler(CommandHandler("story", story_command))
     application.add_handler(CommandHandler("continue", continue_command))
     application.add_handler(CommandHandler("choices", choices_command))
+    application.add_handler(CommandHandler("progress", progress_command))
 
     # Register narrative callback handlers
     register_narrative_handlers(application)
