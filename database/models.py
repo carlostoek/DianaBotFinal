@@ -412,11 +412,18 @@ class ChannelPost(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     channel_id = Column(BigInteger, nullable=False, index=True)
-    post_id = Column(BigInteger, nullable=False, index=True)
-    post_type = Column(String(50), nullable=False)  # 'welcome', 'announcement', 'content', 'reminder'
+    post_id = Column(BigInteger, nullable=True, index=True)  # Nullable for scheduled posts
+    post_type = Column(String(50), nullable=False)  # 'narrative', 'mission', 'announcement', 'trivia', 'event'
     content = Column(Text, nullable=True)
     post_metadata = Column(JSON, nullable=True)  # reactions, views, etc.
-    posted_at = Column(DateTime(timezone=True), server_default=func.now())
+    scheduled_for = Column(DateTime(timezone=True), nullable=True)  # When to publish
+    published_at = Column(DateTime(timezone=True), nullable=True)  # When actually published
+    status = Column(String(50), default='draft')  # 'draft', 'scheduled', 'published', 'cancelled'
+    recurrence = Column(String(50), nullable=True)  # 'daily', 'weekly', 'monthly', None
+    is_protected = Column(Boolean, default=False)  # Protect content from forwarding
+    linked_mission_id = Column(Integer, ForeignKey("missions.id"), nullable=True)
+    linked_fragment_id = Column(Integer, ForeignKey("narrative_fragments.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
         return f"<ChannelPost(channel_id={self.channel_id}, post_id={self.post_id}, type={self.post_type})>"
@@ -430,5 +437,12 @@ class ChannelPost(Base):
             "post_type": self.post_type,
             "content": self.content,
             "post_metadata": self.post_metadata,
-            "posted_at": self.posted_at
+            "scheduled_for": self.scheduled_for,
+            "published_at": self.published_at,
+            "status": self.status,
+            "recurrence": self.recurrence,
+            "is_protected": self.is_protected,
+            "linked_mission_id": self.linked_mission_id,
+            "linked_fragment_id": self.linked_fragment_id,
+            "created_at": self.created_at
         }

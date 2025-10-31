@@ -4,6 +4,7 @@ Scheduled tasks for DianaBot
 - Subscription expiration checks
 - VIP membership verification
 - Automated notifications
+- Scheduled post publishing
 """
 
 import sys
@@ -21,6 +22,7 @@ from database.models import Subscription, ChannelPost
 from modules.admin.subscriptions import SubscriptionService
 from modules.admin.vip_access import VIPAccessControl
 from modules.admin.channels import ChannelService
+from modules.admin.publishing import publishing_service
 
 logger = logging.getLogger(__name__)
 
@@ -202,6 +204,51 @@ class ScheduledTasks:
         except Exception as e:
             logger.error(f"Error generating channel reports: {e}")
             return {}
+    
+    def publish_scheduled_posts(self) -> dict:
+        """
+        Publish scheduled posts that are due
+        Returns publishing statistics
+        """
+        try:
+            # Get posts scheduled for now or earlier
+            due_posts = publishing_service.get_scheduled_posts(due_before=datetime.now())
+            
+            if not due_posts:
+                logger.debug("No scheduled posts due for publication")
+                return {'published': 0, 'failed': 0, 'total': 0}
+            
+            logger.info(f"Found {len(due_posts)} scheduled posts to publish")
+            
+            # Publish each post
+            published_count = 0
+            failed_count = 0
+            
+            for post in due_posts:
+                try:
+                    success = publishing_service.publish_post(post.id)
+                    if success:
+                        published_count += 1
+                        logger.info(f"Successfully published post {post.id}")
+                    else:
+                        failed_count += 1
+                        logger.error(f"Failed to publish post {post.id}")
+                except Exception as e:
+                    failed_count += 1
+                    logger.error(f"Error publishing post {post.id}: {e}")
+            
+            result = {
+                'published': published_count,
+                'failed': failed_count,
+                'total': len(due_posts)
+            }
+            
+            logger.info(f"Post publishing completed: {published_count} published, {failed_count} failed")
+            return result
+                
+        except Exception as e:
+            logger.error(f"Error in publish_scheduled_posts: {e}")
+            return {'published': 0, 'failed': 0, 'total': 0, 'error': str(e)}
 
 
 def run_scheduled_tasks():
@@ -224,7 +271,10 @@ def run_scheduled_tasks():
     welcome_messages = tasks.send_channel_welcome_messages()
     channel_reports = tasks.generate_channel_reports()
     
-    logger.info(f"Scheduled tasks completed: {len(expiring)} expiring, {len(expired)} expired, {len(reminders)} reminders, {len(users_to_remove)} users to remove from channels")
+    # Publish scheduled posts
+    publishing_results = tasks.publish_scheduled_posts()
+    
+    logger.info(f"Scheduled tasks completed: {len(expiring)} expiring, {len(expired)} expired, {len(reminders)} reminders, {len(users_to_remove)} users to remove from channels, {publishing_results['published']} posts published")
     
     return {
         'expiring_subscriptions': expiring,
@@ -232,7 +282,8 @@ def run_scheduled_tasks():
         'reminders_sent': reminders,
         'users_to_remove_from_channels': users_to_remove,
         'welcome_messages_sent': welcome_messages,
-        'channel_reports': channel_reports
+        'channel_reports': channel_reports,
+        'publishing_results': publishing_results
     }
 
 
