@@ -406,6 +406,32 @@ class Channel(Base):
         }
 
 
+class UserReaction(Base):
+    """User reaction tracking for gamified reactions"""
+    __tablename__ = "user_reactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    post_id = Column(Integer, nullable=False, index=True)
+    emoji = Column(String(50), nullable=False)  # The reaction emoji
+    rewarded_at = Column(DateTime(timezone=True), nullable=True)  # When reward was given
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<UserReaction(user_id={self.user_id}, post_id={self.post_id}, emoji={self.emoji})>"
+
+    def to_dict(self):
+        """Convert user reaction to dictionary"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "post_id": self.post_id,
+            "emoji": self.emoji,
+            "rewarded_at": self.rewarded_at,
+            "created_at": self.created_at
+        }
+
+
 class ChannelPost(Base):
     """Channel post model for tracking posts in channels"""
     __tablename__ = "channel_posts"
@@ -416,6 +442,7 @@ class ChannelPost(Base):
     post_type = Column(String(50), nullable=False)  # 'narrative', 'mission', 'announcement', 'trivia', 'event'
     content = Column(Text, nullable=True)
     post_metadata = Column(JSON, nullable=True)  # reactions, views, etc.
+    reaction_rewards = Column(JSON, nullable=True)  # emoji -> reward configuration
     scheduled_for = Column(DateTime(timezone=True), nullable=True)  # When to publish
     published_at = Column(DateTime(timezone=True), nullable=True)  # When actually published
     status = Column(String(50), default='draft')  # 'draft', 'scheduled', 'published', 'cancelled'
@@ -437,6 +464,7 @@ class ChannelPost(Base):
             "post_type": self.post_type,
             "content": self.content,
             "post_metadata": self.post_metadata,
+            "reaction_rewards": self.reaction_rewards,
             "scheduled_for": self.scheduled_for,
             "published_at": self.published_at,
             "status": self.status,

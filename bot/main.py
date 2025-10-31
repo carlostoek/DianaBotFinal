@@ -38,6 +38,9 @@ from bot.commands.missions import missions_command
 # Import achievements command
 from bot.commands.achievements import achievements_command
 
+# Import trivia commands
+from bot.commands.trivia import register_trivia_commands
+
 # Import VIP commands
 from bot.commands.vip import vip_status, vip_upgrade, vip_content
 
@@ -125,6 +128,9 @@ def main():
 
     # Add achievements command
     application.add_handler(CommandHandler("achievements", achievements_command))
+
+    # Add trivia commands
+    register_trivia_commands(application)
 
     # Add VIP commands
     application.add_handler(CommandHandler("vip", vip_status))
