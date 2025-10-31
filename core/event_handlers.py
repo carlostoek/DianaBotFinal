@@ -1,6 +1,8 @@
 import logging
+from datetime import datetime
 from typing import Dict, Any
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from database.connection import get_db
 from database.models import EventLog, User
 from core.event_bus import event_bus
@@ -48,8 +50,8 @@ def update_user_activity_handler(event: Dict[str, Any]) -> None:
             return
             
         if user:
-            from datetime import datetime
-            user.last_active = datetime.now()
+            from sqlalchemy.sql import func
+            user.last_active = func.now()
             db.commit()
             logger.debug(f"Updated last_active for user: {user.telegram_id}")
             
@@ -207,6 +209,50 @@ def reaction_tracking_handler(event: Dict[str, Any]) -> None:
         logger.error(f"Failed to track reaction mission progress: {e}")
 
 
+def trivia_tracking_handler(event: Dict[str, Any]) -> None:
+    """Handler for tracking trivia-based mission progress"""
+    try:
+        event_data = event['data']
+        user_id = event_data.get('user_id')
+        
+        if not user_id:
+            return
+        
+        # Import mission service here to avoid circular imports
+        from modules.gamification.missions import mission_service
+        
+        # Get active missions for user
+        active_missions = mission_service.get_active_missions(user_id)
+        
+        for mission in active_missions:
+            mission_id = mission['id']
+            requirements = mission.get('requirements', {})
+            
+            # Check if this event contributes to any mission requirements
+            progress_updates = {}
+            
+            # Track trivia answers
+            if event['type'] == 'gamification.trivia_answered':
+                if 'trivia_answered' in requirements:
+                    progress_updates['trivia_answered'] = 1
+                
+                # Track correct trivia answers
+                if event_data.get('correct') and 'trivia_correct' in requirements:
+                    progress_updates['trivia_correct'] = 1
+                
+                # Track specific category trivia
+                category = event_data.get('category')
+                if category and f'trivia_{category}_answered' in requirements:
+                    progress_updates[f'trivia_{category}_answered'] = 1
+            
+            # Update mission progress if there are relevant updates
+            if progress_updates:
+                mission_service.update_mission_progress(user_id, mission_id, progress_updates)
+                
+    except Exception as e:
+        logger.error(f"Failed to track trivia mission progress: {e}")
+
+
 def setup_event_handlers() -> None:
     """Setup all event handlers"""
     # Log all user events
@@ -260,5 +306,10 @@ def setup_event_handlers() -> None:
     event_bus.subscribe("admin.reaction_added", log_event_handler)
     event_bus.subscribe("admin.reaction_added", reaction_tracking_handler)
     event_bus.subscribe("admin.reaction_added", achievement_detection_handler)
+    
+    # Trivia events
+    event_bus.subscribe("gamification.trivia_answered", log_event_handler)
+    event_bus.subscribe("gamification.trivia_answered", trivia_tracking_handler)
+    event_bus.subscribe("gamification.trivia_answered", achievement_detection_handler)
     
     logger.info("Event handlers setup completed")

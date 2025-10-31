@@ -15,18 +15,17 @@
 - **Fase 11 completada** - Sistema de Suscripciones VIP
 - **Fase 12 completada** - Canales de Telegram
 - **Fase 13 completada** - Sistema de Publicación Programada en Canales
+- **Fase 14 completada** - Reacciones Gamificadas en Canales
+- **Fase 15 completada** - Sistema de Trivias Básicas
 - **Database Fix**: telegram_id column type fixed (INTEGER → BIGINT)
 
 ## Fase Actual
 
-**Fase 14** - Por implementar
+**Fase 16** - Sistema de Logros Avanzados
 
 ## Próximas Fases
 
-- Fase 13
-- Fase 14
-- Fase 15
-- Fase 16
+- Fase 16 - Sistema de Logros Avanzados
 - Fase 17
 - Fase 18
 - Fase 19
