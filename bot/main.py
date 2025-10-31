@@ -38,6 +38,9 @@ from bot.commands.missions import missions_command
 # Import achievements command
 from bot.commands.achievements import achievements_command
 
+# Import VIP commands
+from bot.commands.vip import vip_status, vip_upgrade, vip_content
+
 # Import narrative handlers
 from bot.handlers.narrative import register_narrative_handlers
 
@@ -119,6 +122,11 @@ def main():
 
     # Add achievements command
     application.add_handler(CommandHandler("achievements", achievements_command))
+
+    # Add VIP commands
+    application.add_handler(CommandHandler("vip", vip_status))
+    application.add_handler(CommandHandler("upgrade", vip_upgrade))
+    application.add_handler(CommandHandler("vip_content", vip_content))
 
     # Register narrative callback handlers
     register_narrative_handlers(application)
