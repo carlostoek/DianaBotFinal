@@ -12,16 +12,16 @@
 - Fase 8 completada
 - Fase 9 completada
 - Fase 10 completada
+- **Fase 11 completada** - Sistema de Suscripciones VIP
+- **Fase 12 completada** - Canales de Telegram
 - **Database Fix**: telegram_id column type fixed (INTEGER → BIGINT)
 
 ## Fase Actual
 
-**Fase 11** - Por implementar
+**Fase 13** - Por implementar
 
 ## Próximas Fases
 
-- Fase 11
-- Fase 12
 - Fase 13
 - Fase 14
 - Fase 15

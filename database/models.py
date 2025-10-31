@@ -254,7 +254,7 @@ class Mission(Base):
             "recurrence": self.recurrence,
             "requirements": self.requirements,
             "rewards": self.rewards,
-            "expiry_date": self.expiry_date.isoformat() if self.expiry_date else None,
+            "expiry_date": self.expiry_date,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
         }
@@ -282,7 +282,7 @@ class UserMission(Base):
             "status": self.status,
             "progress": self.progress,
             "assigned_at": self.assigned_at.isoformat() if hasattr(self.assigned_at, 'isoformat') else None,
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None
+            "completed_at": self.completed_at,
         }
 
 
@@ -371,4 +371,64 @@ class Subscription(Base):
             "payment_reference": self.payment_reference,
             "auto_renew": self.auto_renew,
             "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
+
+
+class Channel(Base):
+    """Channel model for Telegram channels management"""
+    __tablename__ = "channels"
+
+    id = Column(Integer, primary_key=True, index=True)
+    channel_id = Column(BigInteger, unique=True, nullable=False, index=True)
+    channel_type = Column(String(50), nullable=False)  # 'free', 'vip', 'announcements'
+    channel_username = Column(String(255), nullable=True)
+    channel_title = Column(String(255), nullable=False)
+    settings = Column(JSON, nullable=True)  # welcome_message, rules, etc.
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<Channel(channel_id={self.channel_id}, type={self.channel_type}, title={self.channel_title})>"
+
+    def to_dict(self):
+        """Convert channel to dictionary"""
+        return {
+            "id": self.id,
+            "channel_id": self.channel_id,
+            "channel_type": self.channel_type,
+            "channel_username": self.channel_username,
+            "channel_title": self.channel_title,
+            "settings": self.settings,
+            "is_active": self.is_active,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at
+        }
+
+
+class ChannelPost(Base):
+    """Channel post model for tracking posts in channels"""
+    __tablename__ = "channel_posts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    channel_id = Column(BigInteger, nullable=False, index=True)
+    post_id = Column(BigInteger, nullable=False, index=True)
+    post_type = Column(String(50), nullable=False)  # 'welcome', 'announcement', 'content', 'reminder'
+    content = Column(Text, nullable=True)
+    post_metadata = Column(JSON, nullable=True)  # reactions, views, etc.
+    posted_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<ChannelPost(channel_id={self.channel_id}, post_id={self.post_id}, type={self.post_type})>"
+
+    def to_dict(self):
+        """Convert channel post to dictionary"""
+        return {
+            "id": self.id,
+            "channel_id": self.channel_id,
+            "post_id": self.post_id,
+            "post_type": self.post_type,
+            "content": self.content,
+            "post_metadata": self.post_metadata,
+            "posted_at": self.posted_at
         }

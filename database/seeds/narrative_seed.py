@@ -52,6 +52,17 @@ def seed_narrative():
                 },
                 "order_index": 3,
                 "is_active": True
+            },
+            {
+                "level_key": "level_4_vip_exclusive",
+                "title": "El Santuario VIP",
+                "description": "Contenido exclusivo para miembros VIP",
+                "unlock_conditions": {
+                    "subscription_required": "vip",
+                    "required_fragments": ["level_3_end"]
+                },
+                "order_index": 4,
+                "is_active": True
             }
         ]
         
@@ -77,8 +88,27 @@ def seed_narrative():
         level_3 = db.query(NarrativeLevel).filter(NarrativeLevel.level_key == "level_3_attic").first()
         
         if not all([level_1, level_2, level_3]):
-            print("❌ Error: Some levels not found")
+            print("❌ Error: Required levels not found")
             return
+        
+        # Get or create level 4 VIP
+        level_4 = db.query(NarrativeLevel).filter(NarrativeLevel.level_key == "level_4_vip_exclusive").first()
+        if not level_4:
+            # Create level 4 if it doesn't exist
+            level_4 = NarrativeLevel(
+                level_key="level_4_vip_exclusive",
+                title="El Santuario VIP",
+                description="Contenido exclusivo para miembros VIP",
+                unlock_conditions={
+                    "subscription_required": "vip",
+                    "required_fragments": ["level_3_end"]
+                },
+                order_index=4,
+                is_active=True
+            )
+            db.add(level_4)
+            db.commit()
+            print("✅ Created VIP level 4")
         
         # Create narrative fragments
         fragments_data = [
@@ -323,6 +353,66 @@ def seed_narrative():
                     "required_items": ["llave_unificacion"]
                 },
                 "order_index": 6,
+                "is_active": True
+            },
+            
+            # Level 4 VIP Exclusive Fragments
+            {
+                "fragment_key": "vip_intro",
+                "level_id": level_4.id,
+                "title": "La Invitación VIP",
+                "unlock_conditions": {
+                    "subscription_required": "vip",
+                    "required_fragments": ["level_3_end"]
+                },
+                "order_index": 1,
+                "is_active": True
+            },
+            {
+                "fragment_key": "vip_chamber_secrets",
+                "level_id": level_4.id,
+                "title": "Secretos de la Cámara VIP",
+                "unlock_conditions": {
+                    "subscription_required": "vip",
+                    "required_fragments": ["vip_intro"]
+                },
+                "order_index": 2,
+                "is_active": True
+            },
+            {
+                "fragment_key": "vip_ancient_artifact",
+                "level_id": level_4.id,
+                "title": "El Artefacto Ancestral VIP",
+                "unlock_conditions": {
+                    "subscription_required": "vip",
+                    "required_fragments": ["vip_chamber_secrets"],
+                    "required_items": ["llave_vip"]
+                },
+                "order_index": 3,
+                "is_active": True
+            },
+            {
+                "fragment_key": "vip_final_revelation",
+                "level_id": level_4.id,
+                "title": "La Revelación Final VIP",
+                "unlock_conditions": {
+                    "subscription_required": "vip",
+                    "required_fragments": ["vip_ancient_artifact"],
+                    "min_besitos": 200
+                },
+                "order_index": 4,
+                "is_active": True
+            },
+            {
+                "fragment_key": "vip_ultimate_ending",
+                "level_id": level_4.id,
+                "title": "Final Definitivo VIP",
+                "unlock_conditions": {
+                    "subscription_required": "vip",
+                    "required_fragments": ["vip_final_revelation"],
+                    "narrative_flags": ["vip_path_complete"]
+                },
+                "order_index": 5,
                 "is_active": True
             }
         ]
