@@ -4,7 +4,23 @@ from sqlalchemy import text
 from database.connection import get_db
 import redis
 
+# Import routers
+from api.routers.auth import router as auth_router
+from api.routers.config import router as config_router
+from api.routers.users import router as users_router
+from api.routers.content import router as content_router
+from api.routers.analytics import router as analytics_router
+from api.routers.dashboard import router as dashboard_router
+
 app = FastAPI(title="DianaBot API", version="1.0.0")
+
+# Include routers
+app.include_router(auth_router, prefix="/api")
+app.include_router(config_router, prefix="/api")
+app.include_router(users_router, prefix="/api")
+app.include_router(content_router, prefix="/api")
+app.include_router(analytics_router, prefix="/api")
+app.include_router(dashboard_router, prefix="/api")
 
 
 @app.get("/")

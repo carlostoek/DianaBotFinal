@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - DianaBot{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p class="text-gray-600 mt-2">Vista general del sistema DianaBot</p>
+    </div>
+
+    <!-- KPIs en Tiempo Real -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                    <i class="fas fa-users text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-sm font-medium text-gray-500">Usuarios Activos (24h)</h3>
+                    <p class="text-2xl font-bold text-gray-900" id="active-users">--</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                    <i class="fas fa-crown text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-sm font-medium text-gray-500">Suscriptores VIP</h3>
+                    <p class="text-2xl font-bold text-gray-900" id="vip-subs">--</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                    <i class="fas fa-heart text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-sm font-medium text-gray-500">Besitos en Circulación</h3>
+                    <p class="text-2xl font-bold text-gray-900" id="besitos-circulation">--</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                    <i class="fas fa-book text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-sm font-medium text-gray-500">Fragmentos Completados Hoy</h3>
+                    <p class="text-2xl font-bold text-gray-900" id="fragments-today">--</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Alertas del Sistema -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">⚠️ Alertas del Sistema</h2>
+            </div>
+            <div class="p-6">
+                <div id="system-alerts" class="space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-triangle text-yellow-600 mr-3"></i>
+                            <span class="text-sm text-yellow-800">Cargando alertas...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Acciones Rápidas -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">🎯 Acciones Rápidas</h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="navigateTo('/dashboard/content')" class="flex items-center justify-center p-4 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">
+                        <i class="fas fa-plus text-blue-600 mr-2"></i>
+                        <span class="text-sm font-medium text-blue-800">Crear Experiencia</span>
+                    </button>
+                    <button onclick="navigateTo('/dashboard/posts')" class="flex items-center justify-center p-4 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors">
+                        <i class="fas fa-calendar text-green-600 mr-2"></i>
+                        <span class="text-sm font-medium text-green-800">Programar Evento</span>
+                    </button>
+                    <button onclick="showRewardModal()" class="flex items-center justify-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors">
+                        <i class="fas fa-gift text-yellow-600 mr-2"></i>
+                        <span class="text-sm font-medium text-yellow-800">Lanzar Recompensa</span>
+                    </button>
+                    <button onclick="navigateTo('/dashboard/analytics')" class="flex items-center justify-center p-4 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors">
+                        <i class="fas fa-chart-bar text-purple-600 mr-2"></i>
+                        <span class="text-sm font-medium text-purple-800">Ver Analíticas</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuraciones Recientes -->
+    <div class="mt-6 bg-white rounded-lg shadow">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">📝 Configuraciones Recientes</h2>
+        </div>
+        <div class="p-6">
+            <div id="recent-configs" class="space-y-4">
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                    <div>
+                        <span class="text-sm text-gray-600">Cargando configuraciones...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Recompensas -->
+<div id="reward-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md">
+        <h3 class="text-lg font-semibold mb-4">Lanzar Recompensa Masiva</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Recompensa</label>
+                <select id="reward-type" class="w-full border border-gray-300 rounded px-3 py-2">
+                    <option value="besitos">Besitos</option>
+                    <option value="item">Item</option>
+                    <option value="achievement">Achievement</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad/Item</label>
+                <input id="reward-value" type="text" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="Ej: 100 o 'Espada Legendaria'">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Mensaje</label>
+                <textarea id="reward-message" class="w-full border border-gray-300 rounded px-3 py-2" rows="3" placeholder="Mensaje para los usuarios..."></textarea>
+            </div>
+        </div>
+        <div class="flex justify-end space-x-3 mt-6">
+            <button onclick="hideRewardModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200">Cancelar</button>
+            <button onclick="sendMassReward()" class="px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded hover:bg-yellow-700">Enviar Recompensa</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Cargar datos del dashboard al iniciar
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardData();
+    
+    // Actualizar cada 30 segundos
+    setInterval(loadDashboardData, 30000);
+});
+
+async function loadDashboardData() {
+    try {
+        const metrics = await apiRequest('/api/analytics/metrics/summary', 'GET');
+        if (metrics) {
+            document.getElementById('active-users').textContent = metrics.engagement?.dau || '0';
+            document.getElementById('vip-subs').textContent = metrics.monetization?.active_vip_subs || '0';
+            document.getElementById('besitos-circulation').textContent = formatNumber(metrics.gamification?.besitos_in_circulation || 0);
+            document.getElementById('fragments-today').textContent = metrics.narrative?.fragments_completed_today || '0';
+        }
+
+        const alerts = await apiRequest('/api/analytics/alerts', 'GET');
+        if (alerts) {
+            displaySystemAlerts(alerts);
+        }
+
+        const recentConfigs = await apiRequest('/api/config/recent', 'GET');
+        if (recentConfigs) {
+            displayRecentConfigs(recentConfigs);
+        }
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
+}
+
+function displaySystemAlerts(alerts) {
+    const container = document.getElementById('system-alerts');
+    if (!alerts.length) {
+        container.innerHTML = `
+            <div class="flex items-center justify-center p-4 bg-green-50 border border-green-200 rounded">
+                <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                <span class="text-sm text-green-800">No hay alertas activas</span>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = alerts.map(alert => `
+        <div class="flex items-center justify-between p-3 ${getAlertColor(alert.severity)} border ${getAlertBorderColor(alert.severity)} rounded">
+            <div class="flex items-center">
+                <i class="${getAlertIcon(alert.severity)} mr-3"></i>
+                <span class="text-sm ${getAlertTextColor(alert.severity)}">${alert.message}</span>
+            </div>
+            <span class="text-xs ${getAlertTextColor(alert.severity)} opacity-75">${formatTimeAgo(alert.created_at)}</span>
+        </div>
+    `).join('');
+}
+
+function displayRecentConfigs(configs) {
+    const container = document.getElementById('recent-configs');
+    if (!configs.length) {
+        container.innerHTML = `
+            <div class="text-center text-gray-500 py-4">
+                No hay configuraciones recientes
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = configs.map(config => `
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+            <div>
+                <h4 class="font-medium text-gray-900">${config.name}</h4>
+                <p class="text-sm text-gray-600">${config.description}</p>
+                <div class="flex items-center mt-1 space-x-4 text-xs text-gray-500">
+                    <span>Status: <span class="font-medium ${config.status === 'active' ? 'text-green-600' : 'text-yellow-600'}">${config.status}</span></span>
+                    <span>Usuarios: ${config.user_count || 0}</span>
+                </div>
+            </div>
+            <span class="text-xs text-gray-500">${formatTimeAgo(config.created_at)}</span>
+        </div>
+    `).join('');
+}
+
+function showRewardModal() {
+    document.getElementById('reward-modal').classList.remove('hidden');
+}
+
+function hideRewardModal() {
+    document.getElementById('reward-modal').classList.add('hidden');
+}
+
+async function sendMassReward() {
+    const type = document.getElementById('reward-type').value;
+    const value = document.getElementById('reward-value').value;
+    const message = document.getElementById('reward-message').value;
+
+    if (!value) {
+        showAlert('Por favor ingresa un valor para la recompensa', 'error');
+        return;
+    }
+
+    try {
+        const result = await apiRequest('/api/gamification/mass-reward', 'POST', {
+            type,
+            value,
+            message
+        });
+
+        if (result.success) {
+            showAlert('Recompensa enviada exitosamente', 'success');
+            hideRewardModal();
+        }
+    } catch (error) {
+        showAlert('Error al enviar recompensa: ' + error.message, 'error');
+    }
+}
+
+// Funciones de utilidad para alertas
+function getAlertColor(severity) {
+    switch (severity) {
+        case 'critical': return 'bg-red-50';
+        case 'warning': return 'bg-yellow-50';
+        case 'info': return 'bg-blue-50';
+        default: return 'bg-gray-50';
+    }
+}
+
+function getAlertBorderColor(severity) {
+    switch (severity) {
+        case 'critical': return 'border-red-200';
+        case 'warning': return 'border-yellow-200';
+        case 'info': return 'border-blue-200';
+        default: return 'border-gray-200';
+    }
+}
+
+function getAlertTextColor(severity) {
+    switch (severity) {
+        case 'critical': return 'text-red-800';
+        case 'warning': return 'text-yellow-800';
+        case 'info': return 'text-blue-800';
+        default: return 'text-gray-800';
+    }
+}
+
+function getAlertIcon(severity) {
+    switch (severity) {
+        case 'critical': return 'fas fa-exclamation-circle text-red-600';
+        case 'warning': return 'fas fa-exclamation-triangle text-yellow-600';
+        case 'info': return 'fas fa-info-circle text-blue-600';
+        default: return 'fas fa-bell text-gray-600';
+    }
+}
+</script>
+{% endblock %}

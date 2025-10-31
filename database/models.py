@@ -421,14 +421,122 @@ class UserReaction(Base):
         return f"<UserReaction(user_id={self.user_id}, post_id={self.post_id}, emoji={self.emoji})>"
 
     def to_dict(self):
-        """Convert user reaction to dictionary"""
         return {
             "id": self.id,
-            "user_id": self.user_id,
+            "channel_id": self.channel_id,
             "post_id": self.post_id,
-            "emoji": self.emoji,
-            "rewarded_at": self.rewarded_at,
+            "post_type": self.post_type,
+            "content": self.content,
+            "post_metadata": self.post_metadata,
+            "reaction_rewards": self.reaction_rewards,
+            "scheduled_for": self.scheduled_for,
+            "published_at": self.published_at,
+            "status": self.status,
+            "recurrence": self.recurrence,
+            "is_protected": self.is_protected,
+            "linked_mission_id": self.linked_mission_id,
+            "linked_fragment_id": self.linked_fragment_id,
             "created_at": self.created_at
+        }
+
+
+class ConfigTemplate(Base):
+    """Configuration template model for unified configuration management"""
+    __tablename__ = "config_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    template_key = Column(String(100), unique=True, nullable=False, index=True)
+    template_type = Column(String(50), nullable=False)  # 'experience', 'event', 'mission_chain', 'trivia_set'
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    template_schema = Column(JSON, nullable=False)  # JSON schema for validation
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    instances = relationship("ConfigInstance", back_populates="template")
+
+    def __repr__(self):
+        return f"<ConfigTemplate(template_key={self.template_key}, name={self.name}, type={self.template_type})>"
+
+    def to_dict(self):
+        """Convert config template to dictionary"""
+        return {
+            "id": self.id,
+            "template_key": self.template_key,
+            "template_type": self.template_type,
+            "name": self.name,
+            "description": self.description,
+            "template_schema": self.template_schema,
+            "is_active": self.is_active,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at
+        }
+
+
+class ConfigInstance(Base):
+    """Configuration instance model for specific configurations"""
+    __tablename__ = "config_instances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    template_id = Column(Integer, ForeignKey("config_templates.id"), nullable=False)
+    instance_data = Column(JSON, nullable=False)  # configuration specific data
+    created_by = Column(Integer, nullable=True)  # admin user id
+    status = Column(String(50), default='draft')  # 'draft', 'active', 'archived', 'testing'
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    template = relationship("ConfigTemplate", back_populates="instances")
+    versions = relationship("ConfigVersion", back_populates="instance")
+
+    def __repr__(self):
+        return f"<ConfigInstance(id={self.id}, template_id={self.template_id}, status={self.status})>"
+
+    def to_dict(self):
+        """Convert config instance to dictionary"""
+        return {
+            "id": self.id,
+            "template_id": self.template_id,
+            "instance_data": self.instance_data,
+            "created_by": self.created_by,
+            "status": self.status,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at
+        }
+
+
+class ConfigVersion(Base):
+    """Configuration version model for tracking changes"""
+    __tablename__ = "config_versions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    config_instance_id = Column(Integer, ForeignKey("config_instances.id"), nullable=False)
+    version_number = Column(Integer, nullable=False)
+    changed_by = Column(Integer, nullable=True)  # admin user id
+    changes = Column(JSON, nullable=False)  # diff of changes
+    change_reason = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    can_rollback = Column(Boolean, default=True)
+
+    # Relationships
+    instance = relationship("ConfigInstance", back_populates="versions")
+
+    def __repr__(self):
+        return f"<ConfigVersion(instance_id={self.config_instance_id}, version={self.version_number})>"
+
+    def to_dict(self):
+        """Convert config version to dictionary"""
+        return {
+            "id": self.id,
+            "config_instance_id": self.config_instance_id,
+            "version_number": self.version_number,
+            "changed_by": self.changed_by,
+            "changes": self.changes,
+            "change_reason": self.change_reason,
+            "created_at": self.created_at,
+            "can_rollback": self.can_rollback
         }
 
 
@@ -473,4 +581,37 @@ class ChannelPost(Base):
             "linked_mission_id": self.linked_mission_id,
             "linked_fragment_id": self.linked_fragment_id,
             "created_at": self.created_at
+        }
+
+
+class AdminUser(Base):
+    """Admin user model for API authentication"""
+    __tablename__ = "admin_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    role = Column(String(50), nullable=False, default='admin')  # 'owner', 'admin', 'moderator', 'content_creator'
+    is_active = Column(Boolean, default=True)
+    permissions = Column(JSON, nullable=True)  # Additional permissions beyond role
+    last_login = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<AdminUser(username={self.username}, role={self.role})>"
+
+    def to_dict(self):
+        """Convert admin user to dictionary (without sensitive data)"""
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "role": self.role,
+            "is_active": self.is_active,
+            "permissions": self.permissions,
+            "last_login": self.last_login,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at
         }
