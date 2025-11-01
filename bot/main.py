@@ -44,6 +44,9 @@ from bot.commands.trivia import register_trivia_commands
 # Import VIP commands
 from bot.commands.vip import vip_status, vip_upgrade, vip_content
 
+# Import subscription lifecycle commands
+from bot.commands.subscription import subscription_offers, subscription_conversion, subscription_analytics
+
 # Import secret commands
 from bot.commands.secrets import secret_command, secrets_command, hint_command
 
@@ -147,6 +150,11 @@ def main():
     application.add_handler(CommandHandler("vip", vip_status))
     application.add_handler(CommandHandler("upgrade", vip_upgrade))
     application.add_handler(CommandHandler("vip_content", vip_content))
+
+    # Add subscription lifecycle commands
+    application.add_handler(CommandHandler("offers", subscription_offers))
+    application.add_handler(CommandHandler("conversion", subscription_conversion))
+    application.add_handler(CommandHandler("subscription_analytics", subscription_analytics))
 
     # Add channel commands
     application.add_handler(CommandHandler("free_channel", send_free_channel_info))

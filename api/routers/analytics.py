@@ -6,7 +6,7 @@ from database.connection import get_db
 from database.models import (
     User, UserBalance, Subscription, NarrativeFragment, 
     UserNarrativeProgress, Mission, UserMission, Achievement, 
-    UserAchievement, ChannelPost, AdminUser
+    UserAchievement, ChannelPost, AdminUser, ConversionFunnel
 )
 from api.middleware.auth import require_role, get_current_active_user
 from pydantic import BaseModel
@@ -426,3 +426,98 @@ def generate_chart_data(period: str) -> list:
         data.append(random.randint(10, 100))
 
     return data
+
+
+@router.get("/conversion-funnels")
+async def get_conversion_funnel_analytics(
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(require_role("admin"))
+):
+    """Get conversion funnel analytics"""
+    try:
+        # Get funnel statistics
+        total_funnels = db.query(ConversionFunnel).count()
+        active_funnels = db.query(ConversionFunnel).filter(
+            ConversionFunnel.is_active == True
+        ).count()
+        completed_funnels = db.query(ConversionFunnel).filter(
+            ConversionFunnel.is_completed == True
+        ).count()
+        
+        # Get funnel types distribution
+        funnel_types = db.query(
+            ConversionFunnel.funnel_type,
+            func.count(ConversionFunnel.id).label('count')
+        ).group_by(ConversionFunnel.funnel_type).all()
+        
+        # Get stage distribution
+        stage_distribution = db.query(
+            ConversionFunnel.stage_current,
+            func.count(ConversionFunnel.id).label('count')
+        ).filter(
+            ConversionFunnel.is_active == True
+        ).group_by(ConversionFunnel.stage_current).all()
+        
+        # Get conversion rates by funnel type
+        conversion_rates = []
+        for funnel_type in ['free_to_vip', 'engagement_to_purchase', 'free_to_purchaser']:
+            total_type = db.query(ConversionFunnel).filter(
+                ConversionFunnel.funnel_type == funnel_type
+            ).count()
+            
+            completed_type = db.query(ConversionFunnel).filter(
+                ConversionFunnel.funnel_type == funnel_type,
+                ConversionFunnel.is_completed == True
+            ).count()
+            
+            conversion_rate = (completed_type / total_type * 100) if total_type > 0 else 0
+            
+            conversion_rates.append({
+                'funnel_type': funnel_type,
+                'total': total_type,
+                'completed': completed_type,
+                'conversion_rate': round(conversion_rate, 2)
+            })
+        
+        # Get average time to conversion
+        avg_time_query = db.query(
+            func.avg(
+                func.extract('epoch', ConversionFunnel.completed_at - ConversionFunnel.entered_at) / 86400
+            ).label('avg_days')
+        ).filter(
+            ConversionFunnel.is_completed == True
+        ).scalar()
+        
+        avg_time_to_conversion = round(avg_time_query or 0, 2)
+        
+        # Get recent conversions (last 30 days)
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        recent_conversions = db.query(ConversionFunnel).filter(
+            ConversionFunnel.is_completed == True,
+            ConversionFunnel.completed_at >= thirty_days_ago
+        ).count()
+        
+        return {
+            "summary": {
+                "total_funnels": total_funnels,
+                "active_funnels": active_funnels,
+                "completed_funnels": completed_funnels,
+                "avg_time_to_conversion_days": avg_time_to_conversion,
+                "recent_conversions_30d": recent_conversions
+            },
+            "funnel_types": [
+                {"type": funnel_type, "count": count}
+                for funnel_type, count in funnel_types
+            ],
+            "stage_distribution": [
+                {"stage": stage, "count": count}
+                for stage, count in stage_distribution
+            ],
+            "conversion_rates": conversion_rates
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching conversion funnel analytics: {str(e)}"
+        )
