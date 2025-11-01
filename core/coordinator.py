@@ -350,6 +350,22 @@ class CoordinadorCentral:
         # Por ahora, retornar lista vacía
         return []
     
+    def _get_related_experiences_by_content(self, content_type: str, content_id: int) -> List[int]:
+        """
+        Obtiene experiencias relacionadas con contenido específico
+        
+        Args:
+            content_type: Tipo de contenido
+            content_id: ID del contenido
+            
+        Returns:
+            Lista de IDs de experiencias relacionadas
+        """
+        # TODO: Implementar consulta a base de datos para encontrar experiencias
+        # que tengan componentes relacionados con este tipo de contenido
+        # Por ahora, retornar lista vacía
+        return []
+    
     def _get_requirement_suggestions(self, missing_requirements: List[str]) -> List[str]:
         """
         Genera sugerencias para cumplir requisitos faltantes
@@ -481,8 +497,8 @@ class CoordinadorCentral:
             if not content:
                 return {'success': False, 'reason': 'content_not_found'}
             
-            # Registrar reacción
-            tx.execute(
+            # Registrar reacción usando el módulo de gamificación
+            reaction_result = tx.execute(
                 'gamification.register_reaction',
                 user_id=user_id,
                 content_type=content_type,
@@ -490,17 +506,15 @@ class CoordinadorCentral:
                 reaction=reaction
             )
             
-            # Otorgar besitos
-            besitos_config = self._get_reaction_rewards_config()
-            besitos_amount = besitos_config.get(reaction, 0)
+            if not reaction_result.success:
+                return {
+                    'success': False,
+                    'reason': reaction_result.data.get('reason', 'reaction_failed'),
+                    'message': reaction_result.data.get('message', 'Error al procesar reacción')
+                }
             
-            if besitos_amount > 0:
-                tx.execute(
-                    'gamification.grant_besitos',
-                    user_id=user_id,
-                    amount=besitos_amount,
-                    reason=f"Reacción {reaction} en {content_type}"
-                )
+            # Otorgar besitos (ya incluido en el módulo de reacciones)
+            besitos_amount = reaction_result.data.get('besitos_earned', 0)
             
             # Verificar logros
             achievements_unlocked = tx.execute(
@@ -515,6 +529,20 @@ class CoordinadorCentral:
                 reaction=reaction
             )
             
+            # Actualizar experiencias relacionadas
+            related_experiences = self._get_related_experiences_by_content(content_type, content_id)
+            for exp_id in related_experiences:
+                experience_result = tx.execute(
+                    'experience.progress_component',
+                    user_id=user_id,
+                    experience_id=exp_id,
+                    component_type='reaction',
+                    component_id=content_id
+                )
+                
+                if not experience_result.success:
+                    logger.warning(f"Error actualizando experiencia {exp_id}: {experience_result.error}")
+            
             # Emitir eventos
             tx.on_commit(lambda: self.event_bus.publish(
                 'coordinator.content_reacted',
@@ -525,15 +553,20 @@ class CoordinadorCentral:
                     'reaction': reaction,
                     'besitos_earned': besitos_amount,
                     'achievements': achievements_unlocked,
-                    'missions': missions_progressed
+                    'missions': missions_progressed,
+                    'experiences_affected': related_experiences,
+                    'timestamp': datetime.now().isoformat()
                 }
             ))
             
             return {
                 'success': True,
+                'reaction_id': reaction_result.data.get('reaction_id'),
                 'besitos_earned': besitos_amount,
                 'achievements_unlocked': achievements_unlocked,
-                'missions_progressed': missions_progressed
+                'missions_progressed': missions_progressed,
+                'experiences_updated': related_experiences,
+                'message': reaction_result.data.get('message', 'Reacción registrada exitosamente')
             }
     
     def _get_reaction_rewards_config(self) -> Dict[str, int]:

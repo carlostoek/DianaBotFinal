@@ -1068,7 +1068,7 @@ class ShopItem(Base):
             "type": self.type,
             "category": self.category,
             "price_besitos": self.price_besitos,
-            "price_real": float(self.price_real) if self.price_real is not None else None,
+            "price_real": float(str(self.price_real)) if self.price_real is not None else None,
             "currency": self.currency,
             "is_available": self.is_available,
             "stock": self.stock,
@@ -1607,4 +1607,69 @@ class ExperienceReward(Base):
             "is_guaranteed": self.is_guaranteed,
             "metadata": self.reward_metadata,
             "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
+
+
+class ConversionFunnel(Base):
+    """Conversion funnel model for tracking user conversion journeys"""
+    __tablename__ = "conversion_funnels"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    funnel_type = Column(String(50), nullable=False)  # 'free_to_vip', 'engagement_to_purchase', 'free_to_purchaser'
+    
+    # Etapas
+    stage_entered = Column(String(50), nullable=False)
+    stage_current = Column(String(50), nullable=False)
+    stage_completed = Column(String(50), nullable=True)
+    
+    # Fechas
+    entered_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_activity_at = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Estado
+    is_active = Column(Boolean, default=True)
+    is_completed = Column(Boolean, default=False)
+    
+    # Metadata
+    funnel_data = Column(JSON, nullable=True)
+    # Ejemplo:
+    # {
+    #     "touchpoints": 5,
+    #     "offers_shown": 3,
+    #     "offers_clicked": 1,
+    #     "barriers_encountered": ["price", "uncertainty"],
+    #     "time_to_convert": 86400,  # segundos
+    #     "conversion_value": 9.99
+    # }
+    
+    # Relaciones
+    user = relationship("User")
+    
+    __table_args__ = (
+        Index('idx_conversion_funnels_user', 'user_id'),
+        Index('idx_conversion_funnels_type', 'funnel_type'),
+        Index('idx_conversion_funnels_active', 'is_active'),
+        Index('idx_conversion_funnels_completed', 'is_completed'),
+    )
+
+    def __repr__(self):
+        return f"<ConversionFunnel(user_id={self.user_id}, funnel_type={self.funnel_type}, stage_current={self.stage_current})>"
+
+    def to_dict(self):
+        """Convert conversion funnel to dictionary"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "funnel_type": self.funnel_type,
+            "stage_entered": self.stage_entered,
+            "stage_current": self.stage_current,
+            "stage_completed": self.stage_completed,
+            "entered_at": self.entered_at.isoformat() if hasattr(self.entered_at, 'isoformat') else None,
+            "last_activity_at": self.last_activity_at.isoformat() if hasattr(self.last_activity_at, 'isoformat') else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at is not None else None,
+            "is_active": self.is_active,
+            "is_completed": self.is_completed,
+            "funnel_data": self.funnel_data
         }
