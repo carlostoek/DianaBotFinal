@@ -15,9 +15,12 @@ def test_complete_subscription_flow():
     """Test the complete subscription conversion flow from start to finish"""
     print("Testing Complete Subscription Conversion Flow...")
     
+    db = None
+    
     try:
-        # Create subscription lifecycle instance
-        lifecycle = SubscriptionLifecycle()
+        # Create subscription lifecycle instance with proper dependency injection
+        db = next(get_db())
+        lifecycle = SubscriptionLifecycle(db)
         print("✓ SubscriptionLifecycle instance created")
         
         # Test user ID (use a test user)
@@ -33,7 +36,6 @@ def test_complete_subscription_flow():
         print(f"✓ start_conversion_funnel: {start_result}")
         
         # 2. Get active funnel
-        db = next(get_db())
         active_funnel = db.query(ConversionFunnel).filter(
             ConversionFunnel.user_id == test_user_id,
             ConversionFunnel.is_active == True
@@ -103,20 +105,19 @@ def test_complete_subscription_flow():
             # Refresh the funnel from database
             db.refresh(active_funnel)
             
-            if active_funnel and active_funnel.is_completed:
+            if active_funnel.is_completed:
                 print(f"✓ Funnel completed successfully!")
                 print(f"  - Final stage: {active_funnel.stage_completed}")
-                print(f"  - Time to convert: {active_funnel.funnel_data.get('time_to_convert', 0):.2f} seconds")
-                print(f"  - Conversion value: ${active_funnel.funnel_data.get('conversion_value', 0)}")
+                time_to_convert = active_funnel.funnel_data.get('time_to_convert', 0) or 0
+                conversion_value = active_funnel.funnel_data.get('conversion_value', 0) or 0
+                print(f"  - Time to convert: {time_to_convert:.2f} seconds")
+                print(f"  - Conversion value: ${conversion_value}")
             else:
                 print("✗ Funnel not marked as completed")
                 
             # 9. Test analytics data
             print("\n7. Testing analytics data...")
-            from api.routers.analytics import get_conversion_funnel_analytics
-            from api.middleware.auth import require_role
             
-            # Note: This would require admin authentication in production
             # For testing, we'll directly query the database
             total_funnels = db.query(ConversionFunnel).count()
             completed_funnels = db.query(ConversionFunnel).filter(
@@ -144,7 +145,8 @@ def test_complete_subscription_flow():
         traceback.print_exc()
         return False
     finally:
-        db.close()
+        if db:
+            db.close()
 
 if __name__ == "__main__":
     test_complete_subscription_flow()

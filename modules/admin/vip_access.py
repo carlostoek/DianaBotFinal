@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 from typing import Tuple, Optional
 from database.connection import get_redis
-from modules.admin.subscriptions import get_active_subscription, is_vip
+from modules.admin.subscriptions import SubscriptionService
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +20,9 @@ class VIPAccessControl:
         self.redis_client = get_redis()
         # VIP channel ID (should be configured in settings)
         self.vip_channel_id = "@dianabot_vip"  # Placeholder - should be real channel ID
+        self.subscription_service = None  # Will be set with database session
     
-    def verify_vip_access(self, user_id: int, resource_type: str = None, resource_id: str = None) -> Tuple[bool, str]:
+    def verify_vip_access(self, user_id: int, resource_type: str = None, resource_id: str = None, db_session = None) -> Tuple[bool, str]:
         """
         Multi-layer verification for VIP content access
         
@@ -29,12 +30,17 @@ class VIPAccessControl:
             user_id: User ID
             resource_type: Type of resource ('fragment', 'mission', 'channel')
             resource_id: Resource identifier
+            db_session: Database session (required)
             
         Returns:
             Tuple of (access_granted, reason)
         """
+        if not db_session:
+            return False, "Database session required"
+            
         # Layer 1: Verify subscription in database
-        subscription = get_active_subscription(user_id)
+        subscription_service = SubscriptionService(db_session)
+        subscription = subscription_service.get_active_subscription(user_id)
         if not subscription or subscription.status != 'active':
             return False, "No active VIP subscription"
         
@@ -67,7 +73,7 @@ class VIPAccessControl:
         
         return True, "Access granted"
     
-    def check_telegram_membership(self, user_id: int, channel_id: str) -> bool:
+    def check_telegram_membership(self, user_id: int, channel_id: str, db_session = None) -> bool:
         """
         Check if user is member of Telegram channel
         
@@ -77,10 +83,14 @@ class VIPAccessControl:
         Args:
             user_id: User ID
             channel_id: Channel ID
+            db_session: Database session (required)
             
         Returns:
             True if user is member, False otherwise
         """
+        if not db_session:
+            return False
+            
         # Placeholder implementation
         # In production, this would use:
         # bot.get_chat_member(channel_id, user_id)
@@ -88,7 +98,8 @@ class VIPAccessControl:
         logger.info(f"Checking Telegram membership for user {user_id} in channel {channel_id}")
         
         # For now, assume membership if user has active subscription
-        return is_vip(user_id)
+        subscription_service = SubscriptionService(db_session)
+        return subscription_service.is_vip(user_id)
     
     def clear_membership_cache(self, user_id: int) -> bool:
         """
@@ -109,17 +120,26 @@ class VIPAccessControl:
             logger.error(f"Failed to clear membership cache for user {user_id}: {e}")
             return False
     
-    def get_vip_status(self, user_id: int) -> dict:
+    def get_vip_status(self, user_id: int, db_session = None) -> dict:
         """
         Get comprehensive VIP status for user
         
         Args:
             user_id: User ID
+            db_session: Database session (required)
             
         Returns:
             Dictionary with VIP status information
         """
-        subscription = get_active_subscription(user_id)
+        if not db_session:
+            return {
+                "is_vip": False,
+                "reason": "Database session required",
+                "subscription": None
+            }
+            
+        subscription_service = SubscriptionService(db_session)
+        subscription = subscription_service.get_active_subscription(user_id)
         
         if not subscription:
             return {
@@ -138,7 +158,7 @@ class VIPAccessControl:
         if is_member is not None:
             is_member = is_member == b'1'
         else:
-            is_member = self.check_telegram_membership(user_id, self.vip_channel_id)
+            is_member = self.check_telegram_membership(user_id, self.vip_channel_id, db_session)
         
         return {
             "is_vip": is_active and is_member,
@@ -159,13 +179,13 @@ vip_access = VIPAccessControl()
 
 
 # Convenience functions
-def verify_vip_access(user_id: int, resource_type: str = None, resource_id: str = None) -> Tuple[bool, str]:
+def verify_vip_access(user_id: int, resource_type: str = None, resource_id: str = None, db_session = None) -> Tuple[bool, str]:
     """Verify VIP access for user"""
-    return vip_access.verify_vip_access(user_id, resource_type, resource_id)
+    return vip_access.verify_vip_access(user_id, resource_type, resource_id, db_session)
 
-def get_vip_status(user_id: int) -> dict:
+def get_vip_status(user_id: int, db_session = None) -> dict:
     """Get comprehensive VIP status for user"""
-    return vip_access.get_vip_status(user_id)
+    return vip_access.get_vip_status(user_id, db_session)
 
 def clear_membership_cache(user_id: int) -> bool:
     """Clear membership cache for user"""

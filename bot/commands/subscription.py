@@ -13,12 +13,12 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from modules.admin.subscription_lifecycle import SubscriptionLifecycle
-from modules.admin.subscriptions import get_active_subscription, is_vip
+from modules.admin.subscriptions import SubscriptionService
 
 
 async def subscription_offers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show contextual subscription offers based on user's conversion stage"""
-    if not update.message:
+    if not update.message or not update.effective_user:
         return
         
     user_id = update.effective_user.id
@@ -27,7 +27,8 @@ async def subscription_offers(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     try:
         # Check if user is already VIP
-        if is_vip(db, user_id):
+        subscription_service = SubscriptionService(db)
+        if subscription_service.is_vip(user_id):
             message = "🎉 **YA ERES VIP** 🎉\n\n"
             message += "¡Ya disfrutas de todos los beneficios VIP!\n\n"
             message += "**💎 Tus Beneficios:**\n"
@@ -38,7 +39,7 @@ async def subscription_offers(update: Update, context: ContextTypes.DEFAULT_TYPE
             message += "Usa /vip_content para ver tu contenido exclusivo."
         else:
             # Get contextual offers
-            lifecycle = SubscriptionLifecycle()
+            lifecycle = SubscriptionLifecycle(db)
             offers = lifecycle.get_contextual_offers(user_id)
             
             if offers:
@@ -76,7 +77,7 @@ async def subscription_offers(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def subscription_conversion(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle subscription conversion tracking"""
-    if not update.message:
+    if not update.message or not update.effective_user:
         return
         
     user_id = update.effective_user.id
@@ -85,10 +86,11 @@ async def subscription_conversion(update: Update, context: ContextTypes.DEFAULT_
     
     try:
         # Start conversion funnel for free users
-        lifecycle = SubscriptionLifecycle()
+        lifecycle = SubscriptionLifecycle(db)
         
         # Check if user is VIP
-        is_user_vip = is_vip(db, user_id)
+        subscription_service = SubscriptionService(db)
+        is_user_vip = subscription_service.is_vip(user_id)
         
         if not is_user_vip:
             # Start free_to_vip conversion funnel
@@ -121,18 +123,24 @@ async def subscription_conversion(update: Update, context: ContextTypes.DEFAULT_
 
 async def subscription_analytics(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show subscription analytics for admin users"""
-    if not update.message:
+    if not update.message or not update.effective_user:
         return
         
     user_id = update.effective_user.id
     
-    # TODO: Add admin check
-    # For now, show basic analytics to all users
+    # Check if user is admin
+    from bot.utils.admin_auth import is_admin_user
+    if not is_admin_user(user_id):
+        await update.message.reply_text(
+            "❌ **Acceso Denegado**\n\n"
+            "Este comando solo está disponible para administradores."
+        )
+        return
     
     db: Session = next(get_db())
     
     try:
-        lifecycle = SubscriptionLifecycle()
+        lifecycle = SubscriptionLifecycle(db)
         
         message = "📊 **ANALÍTICAS DE SUSCRIPCIÓN** 📊\n\n"
         message += "**Tu Progreso de Conversión:**\n"

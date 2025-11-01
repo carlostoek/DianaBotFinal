@@ -8,8 +8,13 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 from sqlalchemy.orm import Session
-from database.connection import get_db
 from database.models import Subscription, User
+from bot.utils.user_validation import (
+    validate_user_exists, 
+    validate_user_not_banned, 
+    validate_user_can_subscribe,
+    UserValidationError
+)
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +22,8 @@ logger = logging.getLogger(__name__)
 class SubscriptionService:
     """Service for managing user subscriptions"""
     
-    def __init__(self):
-        self.db: Session = next(get_db())
+    def __init__(self, db: Session):
+        self.db = db
     
     def create_subscription(self, user_id: int, subscription_type: str, duration_days: int, 
                           payment_reference: Optional[str] = None, auto_renew: bool = False) -> Optional[Subscription]:
@@ -36,11 +41,8 @@ class SubscriptionService:
             Subscription object if successful, None otherwise
         """
         try:
-            # Check if user already has an active subscription
-            existing_sub = self.get_active_subscription(user_id)
-            if existing_sub:
-                logger.warning(f"User {user_id} already has active subscription")
-                return None
+            # Validate user can subscribe
+            validate_user_can_subscribe(self.db, user_id)
             
             # Calculate dates
             start_date = datetime.now()
@@ -66,6 +68,9 @@ class SubscriptionService:
             logger.info(f"Created {subscription_type} subscription for user {user_id}")
             return subscription
             
+        except UserValidationError as e:
+            logger.warning(f"User validation failed for subscription creation: {e}")
+            return None
         except Exception as e:
             self.db.rollback()
             logger.error(f"Failed to create subscription for user {user_id}: {e}")
@@ -87,14 +92,19 @@ class SubscriptionService:
                 Subscription.status == 'active'
             ).first()
             
-            if subscription and subscription.end_date >= datetime.now():
-                return subscription
-            
-            # If subscription exists but is expired, update status
-            if subscription and subscription.end_date < datetime.now():
-                subscription.status = 'expired'
-                self.db.commit()
-                self._update_user_state(user_id, 'free')
+            if subscription and subscription.end_date:
+                # Convert to naive datetime for comparison
+                end_date = subscription.end_date.replace(tzinfo=None) if subscription.end_date.tzinfo else subscription.end_date
+                now = datetime.now()
+                
+                if end_date >= now:
+                    return subscription
+                
+                # If subscription exists but is expired, update status
+                if end_date < now:
+                    subscription.status = 'expired'
+                    self.db.commit()
+                    self._update_user_state(user_id, 'free')
             
             return None
             
@@ -112,8 +122,13 @@ class SubscriptionService:
         Returns:
             True if user is VIP, False otherwise
         """
-        subscription = self.get_active_subscription(user_id)
-        return subscription is not None
+        try:
+            # Validate user exists and is not banned
+            validate_user_not_banned(self.db, user_id)
+            subscription = self.get_active_subscription(user_id)
+            return subscription is not None
+        except UserValidationError:
+            return False
     
     def cancel_subscription(self, subscription_id: int) -> bool:
         """
@@ -252,45 +267,3 @@ class SubscriptionService:
         except Exception as e:
             logger.error(f"Failed to update user state for {user_id}: {e}")
             return False
-
-
-# Global instance
-subscription_service = SubscriptionService()
-
-
-# Convenience functions
-def create_subscription(user_id: int, subscription_type: str, duration_days: int, 
-                      payment_reference: Optional[str] = None, auto_renew: bool = False) -> Optional[Subscription]:
-    """Create a new subscription"""
-    service = SubscriptionService()
-    return service.create_subscription(user_id, subscription_type, duration_days, payment_reference, auto_renew)
-
-def get_active_subscription(user_id: int) -> Optional[Subscription]:
-    """Get active subscription for user"""
-    service = SubscriptionService()
-    return service.get_active_subscription(user_id)
-
-def is_vip(user_id: int) -> bool:
-    """Check if user has active VIP subscription"""
-    service = SubscriptionService()
-    return service.is_vip(user_id)
-
-def cancel_subscription(subscription_id: int) -> bool:
-    """Cancel a subscription"""
-    service = SubscriptionService()
-    return service.cancel_subscription(subscription_id)
-
-def get_expiring_subscriptions(days_before: int = 7) -> List[Subscription]:
-    """Get subscriptions expiring within specified days"""
-    service = SubscriptionService()
-    return service.get_expiring_subscriptions(days_before)
-
-def get_expired_subscriptions() -> List[Subscription]:
-    """Get subscriptions that have expired"""
-    service = SubscriptionService()
-    return service.get_expired_subscriptions()
-
-def renew_subscription(subscription_id: int, duration_days: int) -> Optional[Subscription]:
-    """Renew an existing subscription"""
-    service = SubscriptionService()
-    return service.renew_subscription(subscription_id, duration_days)

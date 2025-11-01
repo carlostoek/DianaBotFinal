@@ -8,14 +8,16 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from modules.admin.subscription_lifecycle import SubscriptionLifecycle
+from database.connection import get_db
 
 def test_subscription_lifecycle():
     """Test basic subscription lifecycle functionality"""
     print("Testing Subscription Lifecycle...")
     
     try:
-        # Create instance
-        lifecycle = SubscriptionLifecycle()
+        # Create instance with proper dependency injection
+        db = next(get_db())
+        lifecycle = SubscriptionLifecycle(db)
         print("✓ SubscriptionLifecycle instance created")
         
         # Test starting conversion funnel

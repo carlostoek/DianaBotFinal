@@ -8,7 +8,7 @@ from telegram.ext import ContextTypes
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from modules.admin.subscriptions import get_active_subscription, is_vip
+from modules.admin.subscriptions import SubscriptionService
 from modules.admin.vip_access import VIPAccessControl
 
 
@@ -20,10 +20,11 @@ async def vip_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     try:
         # Check VIP status
-        subscription = get_active_subscription(db, user_id)
-        vip_status = is_vip(db, user_id)
+        subscription_service = SubscriptionService(db)
+        subscription = subscription_service.get_active_subscription(user_id)
+        vip_status = subscription_service.is_vip(user_id)
         
-        if vip_status:
+        if vip_status and subscription:
             message = "🎉 **ESTADO VIP ACTIVO** 🎉\n\n"
             message += f"📅 **Suscripción activa hasta:** {subscription.end_date.strftime('%d/%m/%Y')}\n"
             message += f"🔑 **Tipo:** {subscription.subscription_type.upper()}\n"
@@ -94,7 +95,7 @@ async def vip_content(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         # Check VIP access
         vip_access = VIPAccessControl()
-        access_granted, reason = vip_access.verify_vip_access(user_id, "narrative_level", "level_4_vip_exclusive")
+        access_granted, reason = vip_access.verify_vip_access(user_id, "narrative_level", "level_4_vip_exclusive", db)
         
         if access_granted:
             message = "🎭 **CONTENIDO VIP DISPONIBLE** 🎭\n\n"

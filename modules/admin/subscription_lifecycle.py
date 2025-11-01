@@ -33,9 +33,9 @@ class SubscriptionStage(Enum):
 class SubscriptionLifecycle:
     """Manages subscription lifecycle and conversion funnels"""
     
-    def __init__(self):
-        self.db: Session = next(get_db())
-        self.archetype_engine = ArchetypeEngine(self.db)
+    def __init__(self, db: Session):
+        self.db: Session = db
+        self.archetype_engine = ArchetypeEngine(db)
         self.event_bus = event_bus
         self.coordinator = CoordinadorCentral(event_bus)
     
@@ -136,13 +136,14 @@ class SubscriptionLifecycle:
             
             # Update metadata
             if metadata:
-                if not funnel.funnel_data:
-                    funnel.funnel_data = {}
-                funnel.funnel_data.update(metadata)
+                current_data = funnel.funnel_data or {}
+                current_data.update(metadata)
+                funnel.funnel_data = current_data
             
             # Track touchpoints
-            if funnel.funnel_data and "touchpoints" in funnel.funnel_data:
-                funnel.funnel_data["touchpoints"] += 1
+            current_data = funnel.funnel_data or {}
+            current_data["touchpoints"] = current_data.get("touchpoints", 0) + 1
+            funnel.funnel_data = current_data
             
             self.db.commit()
             
@@ -202,14 +203,13 @@ class SubscriptionLifecycle:
             funnel.is_completed = True
             
             # Update conversion data
-            if not funnel.funnel_data:
-                funnel.funnel_data = {}
-            
-            funnel.funnel_data.update({
+            current_data = funnel.funnel_data or {}
+            current_data.update({
                 "time_to_convert": time_to_convert,
                 "conversion_value": conversion_data.get("conversion_value"),
                 "final_stage": final_stage
             })
+            funnel.funnel_data = current_data
             
             self.db.commit()
             
@@ -257,25 +257,25 @@ class SubscriptionLifecycle:
             ).all()
             
             for funnel in active_funnels:
-                if not funnel.funnel_data:
-                    funnel.funnel_data = {}
+                current_data = funnel.funnel_data or {}
                 
                 # Track offers shown
                 if interaction_type == "shown":
-                    funnel.funnel_data["offers_shown"] = funnel.funnel_data.get("offers_shown", 0) + 1
+                    current_data["offers_shown"] = current_data.get("offers_shown", 0) + 1
                 
                 # Track offers clicked
                 elif interaction_type == "clicked":
-                    funnel.funnel_data["offers_clicked"] = funnel.funnel_data.get("offers_clicked", 0) + 1
+                    current_data["offers_clicked"] = current_data.get("offers_clicked", 0) + 1
                 
                 # Track barriers
                 elif interaction_type == "dismissed":
                     barrier = metadata.get("barrier", "unknown")
-                    if "barriers_encountered" not in funnel.funnel_data:
-                        funnel.funnel_data["barriers_encountered"] = []
-                    
-                    if barrier not in funnel.funnel_data["barriers_encountered"]:
-                        funnel.funnel_data["barriers_encountered"].append(barrier)
+                    barriers = current_data.get("barriers_encountered", [])
+                    if barrier not in barriers:
+                        barriers.append(barrier)
+                    current_data["barriers_encountered"] = barriers
+                
+                funnel.funnel_data = current_data
             
             self.db.commit()
             
@@ -504,37 +504,5 @@ class SubscriptionLifecycle:
             return False
 
 
-# Global instance
-subscription_lifecycle = SubscriptionLifecycle()
-
-
-# Convenience functions
-def start_conversion_funnel(user_id: int, funnel_type: str, initial_stage: str) -> bool:
-    """Start tracking a user's conversion journey"""
-    service = SubscriptionLifecycle()
-    return service.start_conversion_funnel(user_id, funnel_type, initial_stage)
-
-def update_conversion_stage(funnel_id: int, new_stage: str, metadata: Optional[Dict] = None) -> bool:
-    """Update user's current stage in conversion funnel"""
-    service = SubscriptionLifecycle()
-    return service.update_conversion_stage(funnel_id, new_stage, metadata)
-
-def complete_conversion_funnel(funnel_id: int, final_stage: str, conversion_data: Dict) -> bool:
-    """Mark conversion funnel as completed"""
-    service = SubscriptionLifecycle()
-    return service.complete_conversion_funnel(funnel_id, final_stage, conversion_data)
-
-def track_offer_interaction(user_id: int, offer_type: str, interaction_type: str, metadata: Dict) -> bool:
-    """Track user interaction with offers"""
-    service = SubscriptionLifecycle()
-    return service.track_offer_interaction(user_id, offer_type, interaction_type, metadata)
-
-def get_contextual_offers(user_id: int) -> List[Dict[str, Any]]:
-    """Get contextual offers based on user's conversion stage and archetype"""
-    service = SubscriptionLifecycle()
-    return service.get_contextual_offers(user_id)
-
-def handle_subscription_conversion(user_id: int, subscription_type: str, payment_data: Dict) -> bool:
-    """Handle subscription conversion and complete relevant funnels"""
-    service = SubscriptionLifecycle()
-    return service.handle_subscription_conversion(user_id, subscription_type, payment_data)
+# No global instance or convenience functions to prevent database connection leaks
+# Use dependency injection pattern: SubscriptionLifecycle(db_session)

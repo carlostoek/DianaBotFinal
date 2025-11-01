@@ -1,0 +1,1512 @@
+============================================================
+PULL REQUEST FEEDBACK COMPLETO
+============================================================
+
+PULL REQUEST #12: Sprint 11: Sistema de Ciclo de Vida de Suscripciones Completado
+============================================================
+
+DESCRIPCIÓN:
+------------------------------------------------------------
+- ✅ Implementado sistema completo de gestión de ciclo de vida de suscripciones
+- ✅ Funnels de conversión: free_trial → engagement → consideration → conversion
+- ✅ Ofertas contextuales basadas en etapa y arquetipo del usuario
+- ✅ Analytics de conversión en dashboard con métricas detalladas
+- ✅ Comandos del bot: /offers, /conversion, /subscription_analytics
+- ✅ Integración con sistema de arquetipos y eventos
+- ✅ Tests completos validando flujo end-to-end
+- ✅ Fix de timezone en cálculos de conversión
+- ✅ Migración de base de datos para conversion_funnels
+
+El sistema ahora permite:
+- Seguimiento automatizado del journey de conversión
+- Ofertas personalizadas según comportamiento del usuario
+- Analytics en tiempo real para administradores
+- Integración con comandos existentes del bot
+
+
+COMENTARIOS EN LA CONVERSACIÓN:
+------------------------------------------------------------
+👤 @gemini-code-assist (2025-11-01T10:56:45Z):
+## Summary of Changes
+
+Hello @carlostoek, I'm Gemini Code Assist[^1]! I'm currently reviewing this pull request and will post my feedback shortly. In the meantime, here's a summary to help you and other reviewers quickly get up to speed!
+
+Este pull request introduce un sistema integral para el seguimiento y la gestión del ciclo de vida de las suscripciones. Su objetivo principal es optimizar la conversión de usuarios mediante la implementación de funnels de conversión, la entrega de ofertas personalizadas y la provisión de analíticas detalladas. Esto permitirá una comprensión más profunda del comportamiento del usuario y una toma de decisiones más informada para mejorar las tasas de suscripción.
+
+### Highlights
+
+* **Sistema de Gestión de Ciclo de Vida de Suscripciones**: Se ha implementado un sistema completo para gestionar el ciclo de vida de las suscripciones, abarcando desde la prueba gratuita hasta la conversión y más allá.
+* **Funnels de Conversión**: Se han definido y rastreado funnels de conversión clave: free_trial → engagement → consideration → conversion, permitiendo un seguimiento detallado del viaje del usuario.
+* **Ofertas Contextuales**: El sistema ahora genera ofertas personalizadas y contextuales basadas en la etapa actual del usuario en el funnel y su arquetipo.
+* **Analíticas de Conversión en Dashboard**: Se ha añadido una nueva sección al dashboard de analíticas para visualizar métricas detalladas de los funnels de conversión.
+* **Nuevos Comandos del Bot**: Se han introducido nuevos comandos para el bot: /offers (para ver ofertas), /conversion (para iniciar el seguimiento de conversión) y /subscription_analytics (para ver analíticas de suscripción).
+* **Integración y Pruebas Completas**: El sistema se integra con los módulos de arquetipos y eventos existentes, y se han añadido tests completos para validar el flujo de extremo a extremo.
+* **Migración de Base de Datos**: Se ha añadido una nueva tabla `conversion_funnels` para almacenar los datos de seguimiento de los embudos de conversión.
+
+
+
+
+
+
+
+<details>
+<summary><b>Using Gemini Code Assist</b></summary>
+<br>
+
+The full guide for Gemini Code Assist can be found on our [documentation page](https://developers.google.com/gemini-code-assist/docs/review-github-code), here are some quick tips.
+
+<b>Invoking Gemini</b>
+
+You can request assistance from Gemini at any point by creating a comment using either `/gemini <command>` or `@gemini-code-assist <command>`. Below is a summary of the supported commands on the current page.
+
+Feature | Command | Description
+--- | --- | ---
+Code Review | `/gemini review` | Performs a code review for the current pull request in its current state.
+Pull Request Summary | `/gemini summary` | Provides a summary of the current pull request in its current state.
+Comment | @gemini-code-assist | Responds in comments when explicitly tagged, both in pull request comments and review comments.
+Help | `/gemini help` | Displays a list of available commands.
+
+<b>Customization</b>
+
+To customize Gemini Code Assist for GitHub experience, repository maintainers can create a configuration file and/or provide a custom code review style guide (such as PEP-8 for Python) by creating and adding files to a `.gemini/` folder in the base of the repository. Detailed instructions can be found [here](https://developers.google.com/gemini-code-assist/docs/customize-gemini-behavior-github).
+
+<b>Limitations & Feedback</b>
+
+Gemini Code Assist may make mistakes. Please leave feedback on any instances where its feedback is incorrect or counter productive. You can react with :thumbsup: and :thumbsdown: on @gemini-code-assist comments. If you're interested in giving your feedback about your experience with Gemini Code Assist for Github and other Google products, sign up [here](https://google.qualtrics.com/jfe/form/SV_2cyuGuTWsEw84yG).
+
+<b>You can also get AI-powered code generation, chat, as well as code reviews directly in the IDE at no cost with the [Gemini Code Assist IDE Extension](https://cloud.google.com/products/gemini/code-assist).</b>
+</details>
+
+
+
+
+[^1]: Review the [Privacy Notices](https://policies.google.com/privacy), [Generative AI Prohibited Use Policy](https://policies.google.com/terms/generative-ai/use-policy), [Terms of Service](https://policies.google.com/terms), and learn how to configure Gemini Code Assist in GitHub [here](https://developers.google.com/gemini-code-assist/docs/customize-gemini-behavior-github). Gemini can make mistakes, so double check it and [use code with caution](https://support.google.com/legal/answer/13505487).
+
+------------------------------------------------------------
+
+
+REVIEWS GENERALES:
+------------------------------------------------------------
+👤 @gemini-code-assist [COMMENTED] (2025-11-01T10:58:42Z):
+## Code Review
+
+Este pull request introduce un sistema completo para gestionar el ciclo de vida de las suscripciones, incluyendo funnels de conversión, ofertas contextuales y analíticas. El trabajo es extenso y abarca la base de datos, la API, la lógica del bot y el dashboard. En general, es una adición de gran valor. Sin embargo, he identificado varios problemas críticos que deben ser resueltos antes de la fusión. El más importante es una fuga de conexiones de base de datos en el nuevo módulo `subscription_lifecycle`, que podría agotar el pool de conexiones rápidamente. También hay problemas con el manejo de zonas horarias que pueden llevar a cálculos incorrectos y una vulnerabilidad de seguridad en un nuevo comando del bot que expone analíticas a todos los usuarios. Además, hay varias oportunidades para mejorar la eficiencia de las consultas a la base de datos y la estructura del código.
+------------------------------------------------------------
+
+
+COMENTARIOS EN ARCHIVOS ESPECÍFICOS:
+============================================================
+
+📄 ARCHIVO: api/routers/analytics.py
+============================================================
+  📍 Línea 480 | @gemini-code-assist[bot]:
+  💬 ![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+Este bucle realiza dos consultas a la base de datos por cada tipo de funnel, lo que se conoce como un problema de N+1 queries. A medida que se añadan más tipos de funnels, el rendimiento se degradará. Además, los tipos de funnel están hardcodeados, lo que puede causar que el código no esté sincronizado con los datos reales en la base de datos.
+
+Es mucho más eficiente obtener todos los datos en una sola consulta usando `GROUP BY` y agregación condicional. Para ello, puedes usar `case` de `sqlalchemy.sql.expression`.
+
+```python
+        conversion_stats = db.query(
+            ConversionFunnel.funnel_type,
+            func.count(ConversionFunnel.id).label('total'),
+            func.sum(case((ConversionFunnel.is_completed == True, 1), else_=0)).label('completed')
+        ).group_by(ConversionFunnel.funnel_type).all()
+
+        conversion_rates = []
+        for row in conversion_stats:
+            conversion_rate = (row.completed / row.total * 100) if row.total > 0 else 0
+            conversion_rates.append({
+                'funnel_type': row.funnel_type,
+                'total': row.total,
+                'completed': row.completed,
+                'conversion_rate': round(conversion_rate, 2)
+            })
+```
+  
+  Código:
+  ```
+  @@ -425,4 +425,99 @@ def generate_chart_data(period: str) -> list:
+       for i in range(len(labels)):
+           data.append(random.randint(10, 100))
+   
+  -    return data
+  \ No newline at end of file
+  +    return data
+  +
+  +
+  +@router.get("/conversion-funnels")
+  +async def get_conversion_funnel_analytics(
+  +    db: Session = Depends(get_db),
+  +    current_user: AdminUser = Depends(require_role("admin"))
+  +):
+  +    """Get conversion funnel analytics"""
+  +    try:
+  +        # Get funnel statistics
+  +        total_funnels = db.query(ConversionFunnel).count()
+  +        active_funnels = db.query(ConversionFunnel).filter(
+  +            ConversionFunnel.is_active == True
+  +        ).count()
+  +        completed_funnels = db.query(ConversionFunnel).filter(
+  +            ConversionFunnel.is_completed == True
+  +        ).count()
+  +        
+  +        # Get funnel types distribution
+  +        funnel_types = db.query(
+  +            ConversionFunnel.funnel_type,
+  +            func.count(ConversionFunnel.id).label('count')
+  +        ).group_by(ConversionFunnel.funnel_type).all()
+  +        
+  +        # Get stage distribution
+  +        stage_distribution = db.query(
+  +            ConversionFunnel.stage_current,
+  +            func.count(ConversionFunnel.id).label('count')
+  +        ).filter(
+  +            ConversionFunnel.is_active == True
+  +        ).group_by(ConversionFunnel.stage_current).all()
+  +        
+  +        # Get conversion rates by funnel type
+  +        conversion_rates = []
+  +        for funnel_type in ['free_to_vip', 'engagement_to_purchase', 'free_to_purchaser']:
+  +            total_type = db.query(ConversionFunnel).filter(
+  +                ConversionFunnel.funnel_type == funnel_type
+  +            ).count()
+  +            
+  +            completed_type = db.query(ConversionFunnel).filter(
+  +                ConversionFunnel.funnel_type == funnel_type,
+  +                ConversionFunnel.is_completed == True
+  +            ).count()
+  +            
+  +            conversion_rate = (completed_type / total_type * 100) if total_type > 0 else 0
+  +            
+  +            conversion_rates.append({
+  +                'funnel_type': funnel_type,
+  +                'total': total_type,
+  +                'completed': completed_type,
+  +                'conversion_rate': round(conversion_rate, 2)
+  +            })
+  ```
+  ----------------------------------------------------------
+
+📄 ARCHIVO: bot/commands/subscription.py
+============================================================
+  📍 Línea 8 | @gemini-code-assist[bot]:
+  💬 ![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+El uso de `sys.path.insert` es una mala práctica que indica un problema en la estructura del proyecto. Hace que el código sea menos portable y más difícil de entender para otros desarrolladores. El proyecto debería estar configurado como un paquete de Python para que los imports absolutos funcionen sin necesidad de manipular el `sys.path`.
+  
+  Código:
+  ```
+  @@ -0,0 +1,164 @@
+  +#!/usr/bin/env python3
+  +"""
+  +Subscription lifecycle commands for DianaBot
+  +"""
+  +
+  +import sys
+  +import os
+  +sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+  ```
+  ----------------------------------------------------------
+  📍 Línea 130 | @gemini-code-assist[bot]:
+  💬 ![high](https://www.gstatic.com/codereviewagent/high-priority.svg)
+
+Este comando expone analíticas de suscripción a todos los usuarios, lo cual representa un riesgo de seguridad y privacidad. El `TODO` indica que eres consciente de esto, pero es crucial implementar la verificación de administrador antes de que el código llegue a producción para evitar la exposición de datos sensibles.
+  
+  Código:
+  ```
+  @@ -0,0 +1,164 @@
+  +#!/usr/bin/env python3
+  +"""
+  +Subscription lifecycle commands for DianaBot
+  +"""
+  +
+  +import sys
+  +import os
+  +sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+  +
+  +from telegram import Update
+  +from telegram.ext import ContextTypes
+  +from sqlalchemy.orm import Session
+  +
+  +from database.connection import get_db
+  +from modules.admin.subscription_lifecycle import SubscriptionLifecycle
+  +from modules.admin.subscriptions import get_active_subscription, is_vip
+  +
+  +
+  +async def subscription_offers(update: Update, context: ContextTypes.DEFAULT_TYPE):
+  +    """Show contextual subscription offers based on user's conversion stage"""
+  +    if not update.message:
+  +        return
+  +        
+  +    user_id = update.effective_user.id
+  +    
+  +    db: Session = next(get_db())
+  +    
+  +    try:
+  +        # Check if user is already VIP
+  +        if is_vip(db, user_id):
+  +            message = "🎉 **YA ERES VIP** 🎉\n\n"
+  +            message += "¡Ya disfrutas de todos los beneficios VIP!\n\n"
+  +            message += "**💎 Tus Beneficios:**\n"
+  +            message += "• Contenido narrativo exclusivo\n"
+  +            message += "• Recompensas duplicadas\n"
+  +            message += "• Acceso prioritario\n"
+  +            message += "• Soporte personalizado\n\n"
+  +            message += "Usa /vip_content para ver tu contenido exclusivo."
+  +        else:
+  +            # Get contextual offers
+  +            lifecycle = SubscriptionLifecycle()
+  +            offers = lifecycle.get_contextual_offers(user_id)
+  +            
+  +            if offers:
+  +                message = "💎 **OFERTAS PERSONALIZADAS** 💎\n\n"
+  +                message += "Basado en tu actividad, estas ofertas son perfectas para ti:\n\n"
+  +                
+  +                for i, offer in enumerate(offers, 1):
+  +                    message += f"**{i}. {offer['title']}**\n"
+  +                    message += f"   {offer['description']}\n"
+  +                    message += f"   💰 **Valor:** {offer['value']}\n\n"
+  +                
+  +                message += "**📋 Cómo Suscribirse:**\n"
+  +                message += "1. Contacta a @DianaBotAdmin\n"
+  +                message += "2. Menciona la oferta que te interesa\n"
+  +                message += "3. Realiza el pago\n"
+  +                message += "4. ¡Disfruta de tus beneficios VIP!\n\n"
+  +                message += "Usa /vip para verificar tu estado actual."
+  +            else:
+  +                message = "💎 **SUSCRIPCIÓN VIP** 💎\n\n"
+  +                message += "Desbloquea contenido exclusivo y beneficios especiales:\n\n"
+  +                message += "**🎁 Beneficios VIP:**\n"
+  +                message += "• Contenido narrativo exclusivo\n"
+  +                message += "• Recompensas duplicadas\n"
+  +                message += "• Acceso prioritario\n"
+  +                message += "• Soporte personalizado\n\n"
+  +                message += "Usa /upgrade para obtener más información."
+  +        
+  +        await update.message.reply_text(message, parse_mode='Markdown')
+  +        
+  +    except Exception as e:
+  +        await update.message.reply_text("❌ Error al obtener ofertas personalizadas. Intenta más tarde.")
+  +    finally:
+  +        db.close()
+  +
+  +
+  +async def subscription_conversion(update: Update, context: ContextTypes.DEFAULT_TYPE):
+  +    """Handle subscription conversion tracking"""
+  +    if not update.message:
+  +        return
+  +        
+  +    user_id = update.effective_user.id
+  +    
+  +    db: Session = next(get_db())
+  +    
+  +    try:
+  +        # Start conversion funnel for free users
+  +        lifecycle = SubscriptionLifecycle()
+  +        
+  +        # Check if user is VIP
+  +        is_user_vip = is_vip(db, user_id)
+  +        
+  +        if not is_user_vip:
+  +            # Start free_to_vip conversion funnel
+  +            lifecycle.start_conversion_funnel(
+  +                user_id=user_id,
+  +                funnel_type="free_to_vip",
+  +                initial_stage="free_trial"
+  +            )
+  +            
+  +            message = "🎯 **CONVERSIÓN VIP** 🎯\n\n"
+  +            message += "¡Estás en el camino hacia VIP!\n\n"
+  +            message += "**📈 Tu Progreso:**\n"
+  +            message += "• Etapa actual: Prueba Gratuita\n"
+  +            message += "• Próximos pasos: Ofertas personalizadas\n"
+  +            message += "• Meta final: Suscripción VIP\n\n"
+  +            message += "Usa /offers para ver ofertas personalizadas para ti."
+  +        else:
+  +            message = "🎉 **YA ERES VIP** 🎉\n\n"
+  +            message += "¡Ya completaste tu conversión a VIP!\n\n"
+  +            message += "Disfruta de todos los beneficios exclusivos.\n"
+  +            message += "Usa /vip_content para acceder a tu contenido."
+  +        
+  +        await update.message.reply_text(message, parse_mode='Markdown')
+  +        
+  +    except Exception as e:
+  +        await update.message.reply_text("❌ Error en el seguimiento de conversión. Intenta más tarde.")
+  +    finally:
+  +        db.close()
+  +
+  +
+  +async def subscription_analytics(update: Update, context: ContextTypes.DEFAULT_TYPE):
+  +    """Show subscription analytics for admin users"""
+  +    if not update.message:
+  +        return
+  +        
+  +    user_id = update.effective_user.id
+  +    
+  +    # TODO: Add admin check
+  +    # For now, show basic analytics to all users
+  ```
+  ----------------------------------------------------------
+  📍 Línea 141 | @gemini-code-assist[bot]:
+  💬 ![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+La importación de `ConversionFunnel` se realiza dentro de la función `subscription_analytics`. Según las convenciones de estilo de Python (PEP 8), todas las importaciones deben estar al principio del archivo. Esto mejora la legibilidad y evita importaciones repetidas. Por favor, mueve esta línea al inicio del archivo.
+  
+  Código:
+  ```
+  @@ -0,0 +1,164 @@
+  +#!/usr/bin/env python3
+  +"""
+  +Subscription lifecycle commands for DianaBot
+  +"""
+  +
+  +import sys
+  +import os
+  +sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+  +
+  +from telegram import Update
+  +from telegram.ext import ContextTypes
+  +from sqlalchemy.orm import Session
+  +
+  +from database.connection import get_db
+  +from modules.admin.subscription_lifecycle import SubscriptionLifecycle
+  +from modules.admin.subscriptions import get_active_subscription, is_vip
+  +
+  +
+  +async def subscription_offers(update: Update, context: ContextTypes.DEFAULT_TYPE):
+  +    """Show contextual subscription offers based on user's conversion stage"""
+  +    if not update.message:
+  +        return
+  +        
+  +    user_id = update.effective_user.id
+  +    
+  +    db: Session = next(get_db())
+  +    
+  +    try:
+  +        # Check if user is already VIP
+  +        if is_vip(db, user_id):
+  +            message = "🎉 **YA ERES VIP** 🎉\n\n"
+  +            message += "¡Ya disfrutas de todos los beneficios VIP!\n\n"
+  +            message += "**💎 Tus Beneficios:**\n"
+  +            message += "• Contenido narrativo exclusivo\n"
+  +            message += "• Recompensas duplicadas\n"
+  +            message += "• Acceso prioritario\n"
+  +            message += "• Soporte personalizado\n\n"
+  +            message += "Usa /vip_content para ver tu contenido exclusivo."
+  +        else:
+  +            # Get contextual offers
+  +            lifecycle = SubscriptionLifecycle()
+  +            offers = lifecycle.get_contextual_offers(user_id)
+  +            
+  +            if offers:
+  +                message = "💎 **OFERTAS PERSONALIZADAS** 💎\n\n"
+  +                message += "Basado en tu actividad, estas ofertas son perfectas para ti:\n\n"
+  +                
+  +                for i, offer in enumerate(offers, 1):
+  +                    message += f"**{i}. {offer['title']}**\n"
+  +                    message += f"   {offer['description']}\n"
+  +                    message += f"   💰 **Valor:** {offer['value']}\n\n"
+  +                
+  +                message += "**📋 Cómo Suscribirse:**\n"
+  +                message += "1. Contacta a @DianaBotAdmin\n"
+  +                message += "2. Menciona la oferta que te interesa\n"
+  +                message += "3. Realiza el pago\n"
+  +                message += "4. ¡Disfruta de tus beneficios VIP!\n\n"
+  +                message += "Usa /vip para verificar tu estado actual."
+  +            else:
+  +                message = "💎 **SUSCRIPCIÓN VIP** 💎\n\n"
+  +                message += "Desbloquea contenido exclusivo y beneficios especiales:\n\n"
+  +                message += "**🎁 Beneficios VIP:**\n"
+  +                message += "• Contenido narrativo exclusivo\n"
+  +                message += "• Recompensas duplicadas\n"
+  +                message += "• Acceso prioritario\n"
+  +                message += "• Soporte personalizado\n\n"
+  +                message += "Usa /upgrade para obtener más información."
+  +        
+  +        await update.message.reply_text(message, parse_mode='Markdown')
+  +        
+  +    except Exception as e:
+  +        await update.message.reply_text("❌ Error al obtener ofertas personalizadas. Intenta más tarde.")
+  +    finally:
+  +        db.close()
+  +
+  +
+  +async def subscription_conversion(update: Update, context: ContextTypes.DEFAULT_TYPE):
+  +    """Handle subscription conversion tracking"""
+  +    if not update.message:
+  +        return
+  +        
+  +    user_id = update.effective_user.id
+  +    
+  +    db: Session = next(get_db())
+  +    
+  +    try:
+  +        # Start conversion funnel for free users
+  +        lifecycle = SubscriptionLifecycle()
+  +        
+  +        # Check if user is VIP
+  +        is_user_vip = is_vip(db, user_id)
+  +        
+  +        if not is_user_vip:
+  +            # Start free_to_vip conversion funnel
+  +            lifecycle.start_conversion_funnel(
+  +                user_id=user_id,
+  +                funnel_type="free_to_vip",
+  +                initial_stage="free_trial"
+  +            )
+  +            
+  +            message = "🎯 **CONVERSIÓN VIP** 🎯\n\n"
+  +            message += "¡Estás en el camino hacia VIP!\n\n"
+  +            message += "**📈 Tu Progreso:**\n"
+  +            message += "• Etapa actual: Prueba Gratuita\n"
+  +            message += "• Próximos pasos: Ofertas personalizadas\n"
+  +            message += "• Meta final: Suscripción VIP\n\n"
+  +            message += "Usa /offers para ver ofertas personalizadas para ti."
+  +        else:
+  +            message = "🎉 **YA ERES VIP** 🎉\n\n"
+  +            message += "¡Ya completaste tu conversión a VIP!\n\n"
+  +            message += "Disfruta de todos los beneficios exclusivos.\n"
+  +            message += "Usa /vip_content para acceder a tu contenido."
+  +        
+  +        await update.message.reply_text(message, parse_mode='Markdown')
+  +        
+  +    except Exception as e:
+  +        await update.message.reply_text("❌ Error en el seguimiento de conversión. Intenta más tarde.")
+  +    finally:
+  +        db.close()
+  +
+  +
+  +async def subscription_analytics(update: Update, context: ContextTypes.DEFAULT_TYPE):
+  +    """Show subscription analytics for admin users"""
+  +    if not update.message:
+  +        return
+  +        
+  +    user_id = update.effective_user.id
+  +    
+  +    # TODO: Add admin check
+  +    # For now, show basic analytics to all users
+  +    
+  +    db: Session = next(get_db())
+  +    
+  +    try:
+  +        lifecycle = SubscriptionLifecycle()
+  +        
+  +        message = "📊 **ANALÍTICAS DE SUSCRIPCIÓN** 📊\n\n"
+  +        message += "**Tu Progreso de Conversión:**\n"
+  +        
+  +        # Get user's active funnels
+  +        from database.models import ConversionFunnel
+  ```
+  ----------------------------------------------------------
+
+📄 ARCHIVO: core/coordinator.py
+============================================================
+  📍 Línea 558 | @gemini-code-assist[bot]:
+  💬 ![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+El timestamp del evento se está generando con `datetime.now()`, que es "naive" (no tiene zona horaria). Esto puede causar inconsistencias y errores si los sistemas que consumen estos eventos esperan timestamps con zona horaria (lo cual es una buena práctica). Es mejor usar siempre timestamps "aware" para asegurar la consistencia a través de todo el sistema. Asegúrate de importar `timezone` desde `datetime`.
+
+```suggestion
+                    'timestamp': datetime.now(timezone.utc).isoformat()
+```
+  
+  Código:
+  ```
+  @@ -525,15 +553,20 @@ def REACCIONAR_CONTENIDO(self, user_id: int, content_type: str, content_id: int,
+                       'reaction': reaction,
+                       'besitos_earned': besitos_amount,
+                       'achievements': achievements_unlocked,
+  -                    'missions': missions_progressed
+  +                    'missions': missions_progressed,
+  +                    'experiences_affected': related_experiences,
+  +                    'timestamp': datetime.now().isoformat()
+  ```
+  ----------------------------------------------------------
+
+📄 ARCHIVO: database/models.py
+============================================================
+  📍 Línea 1071 | @gemini-code-assist[bot]:
+  💬 ![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+La conversión `float(str(self.price_real))` es ineficiente y puede introducir errores de precisión. El tipo `Numeric` de SQLAlchemy (que a menudo se mapea a `Decimal` de Python) se puede convertir directamente a `float`. Este cambio de `float(self.price_real)` a `float(str(self.price_real))` parece incorrecto. Si no hay una razón específica para la conversión a `str`, debería revertirse.
+
+```suggestion
+            "price_real": float(self.price_real) if self.price_real is not None else None,
+```
+  
+  Código:
+  ```
+  @@ -1068,7 +1068,7 @@ def to_dict(self):
+               "type": self.type,
+               "category": self.category,
+               "price_besitos": self.price_besitos,
+  -            "price_real": float(self.price_real) if self.price_real is not None else None,
+  +            "price_real": float(str(self.price_real)) if self.price_real is not None else None,
+  ```
+  ----------------------------------------------------------
+
+📄 ARCHIVO: modules/admin/subscription_lifecycle.py
+============================================================
+  📍 Línea 40 | @gemini-code-assist[bot]:
+  💬 ![critical](https://www.gstatic.com/codereviewagent/critical.svg)
+
+El constructor de `SubscriptionLifecycle` obtiene una sesión de base de datos con `next(get_db())` pero nunca la cierra. Dado que se crea una instancia global `subscription_lifecycle` y las funciones de conveniencia al final del archivo crean nuevas instancias en cada llamada, esto provocará fugas de conexiones que agotarán el pool de la base de datos y harán que la aplicación falle. La sesión de base de datos debe ser gestionada por el llamador (por ejemplo, a través de un context manager `with`) y pasada al constructor.
+
+```suggestion
+    def __init__(self, db: Session):
+        self.db = db
+        self.archetype_engine = ArchetypeEngine(self.db)
+        self.event_bus = event_bus
+        self.coordinator = CoordinadorCentral(event_bus)
+```
+  
+  Código:
+  ```
+  @@ -0,0 +1,540 @@
+  +#!/usr/bin/env python3
+  +"""
+  +Subscription Lifecycle Management
+  +Manages automated subscription workflows, conversion funnels, and lifecycle events
+  +"""
+  +
+  +import logging
+  +from datetime import datetime, timedelta
+  +from typing import Optional, Dict, Any, List
+  +from enum import Enum
+  +from sqlalchemy.orm import Session
+  +from database.connection import get_db
+  +from database.models import Subscription, User
+  +from modules.commerce.archetypes import ArchetypeEngine
+  +from core.event_bus import event_bus
+  +from core.coordinator import CoordinadorCentral
+  +
+  +logger = logging.getLogger(__name__)
+  +
+  +
+  +class SubscriptionStage(Enum):
+  +    """Subscription lifecycle stages"""
+  +    FREE_TRIAL = "free_trial"
+  +    ENGAGEMENT = "engagement"
+  +    CONSIDERATION = "consideration"
+  +    CONVERSION = "conversion"
+  +    ACTIVE_VIP = "active_vip"
+  +    RENEWAL = "renewal"
+  +    CHURN_RISK = "churn_risk"
+  +    EXPIRED = "expired"
+  +
+  +
+  +class SubscriptionLifecycle:
+  +    """Manages subscription lifecycle and conversion funnels"""
+  +    
+  +    def __init__(self):
+  +        self.db: Session = next(get_db())
+  +        self.archetype_engine = ArchetypeEngine(self.db)
+  +        self.event_bus = event_bus
+  +        self.coordinator = CoordinadorCentral(event_bus)
+  ```
+  ----------------------------------------------------------
+  📍 Línea 196 | @gemini-code-assist[bot]:
+  💬 ![high](https://www.gstatic.com/codereviewagent/high-priority.svg)
+
+El manejo de la zona horaria aquí es incorrecto y puede producir cálculos de duración erróneos. `datetime.now()` es "naive" (no tiene zona horaria), mientras que `funnel.entered_at` es "aware" (viene de la base de datos con zona horaria). Usar `.replace(tzinfo=None)` para eliminar la zona horaria de `entered_at` es una mala práctica que oculta el problema y puede fallar si la zona horaria del servidor no es UTC. Debes usar datetimes 'aware' en todo momento para evitar errores. Asegúrate de importar `timezone` desde `datetime`.
+
+```suggestion
+            current_time = datetime.now(timezone.utc)
+            entered_at = funnel.entered_at
+            time_to_convert = (current_time - entered_at).total_seconds()
+```
+  
+  Código:
+  ```
+  @@ -0,0 +1,540 @@
+  +#!/usr/bin/env python3
+  +"""
+  +Subscription Lifecycle Management
+  +Manages automated subscription workflows, conversion funnels, and lifecycle events
+  +"""
+  +
+  +import logging
+  +from datetime import datetime, timedelta
+  +from typing import Optional, Dict, Any, List
+  +from enum import Enum
+  +from sqlalchemy.orm import Session
+  +from database.connection import get_db
+  +from database.models import Subscription, User
+  +from modules.commerce.archetypes import ArchetypeEngine
+  +from core.event_bus import event_bus
+  +from core.coordinator import CoordinadorCentral
+  +
+  +logger = logging.getLogger(__name__)
+  +
+  +
+  +class SubscriptionStage(Enum):
+  +    """Subscription lifecycle stages"""
+  +    FREE_TRIAL = "free_trial"
+  +    ENGAGEMENT = "engagement"
+  +    CONSIDERATION = "consideration"
+  +    CONVERSION = "conversion"
+  +    ACTIVE_VIP = "active_vip"
+  +    RENEWAL = "renewal"
+  +    CHURN_RISK = "churn_risk"
+  +    EXPIRED = "expired"
+  +
+  +
+  +class SubscriptionLifecycle:
+  +    """Manages subscription lifecycle and conversion funnels"""
+  +    
+  +    def __init__(self):
+  +        self.db: Session = next(get_db())
+  +        self.archetype_engine = ArchetypeEngine(self.db)
+  +        self.event_bus = event_bus
+  +        self.coordinator = CoordinadorCentral(event_bus)
+  +    
+  +    def start_conversion_funnel(self, user_id: int, funnel_type: str, initial_stage: str) -> bool:
+  +        """
+  +        Start tracking a user's conversion journey
+  +        
+  +        Args:
+  +            user_id: User ID
+  +            funnel_type: Type of funnel ('free_to_vip', 'engagement_to_purchase', 'free_to_purchaser')
+  +            initial_stage: Initial stage of the funnel
+  +            
+  +        Returns:
+  +            True if successful, False otherwise
+  +        """
+  +        try:
+  +            # Import ConversionFunnel from main models
+  +            from database.models import ConversionFunnel
+  +            
+  +            # Check if user already has an active funnel of this type
+  +            existing_funnel = self.db.query(ConversionFunnel).filter(
+  +                ConversionFunnel.user_id == user_id,
+  +                ConversionFunnel.funnel_type == funnel_type,
+  +                ConversionFunnel.is_active == True
+  +            ).first()
+  +            
+  +            if existing_funnel:
+  +                logger.info(f"User {user_id} already has active {funnel_type} funnel")
+  +                return True
+  +            
+  +            # Create new conversion funnel
+  +            funnel = ConversionFunnel(
+  +                user_id=user_id,
+  +                funnel_type=funnel_type,
+  +                stage_entered=initial_stage,
+  +                stage_current=initial_stage,
+  +                stage_completed=None,
+  +                is_active=True,
+  +                is_completed=False,
+  +                funnel_data={
+  +                    "touchpoints": 0,
+  +                    "offers_shown": 0,
+  +                    "offers_clicked": 0,
+  +                    "barriers_encountered": [],
+  +                    "time_to_convert": None,
+  +                    "conversion_value": None
+  +                }
+  +            )
+  +            
+  +            self.db.add(funnel)
+  +            self.db.commit()
+  +            
+  +            # Emit event
+  +            self.event_bus.publish(
+  +                "conversion_funnel_started",
+  +                {
+  +                    "user_id": user_id,
+  +                    "funnel_type": funnel_type,
+  +                    "initial_stage": initial_stage,
+  +                    "funnel_id": funnel.id
+  +                }
+  +            )
+  +            
+  +            logger.info(f"Started {funnel_type} conversion funnel for user {user_id}")
+  +            return True
+  +            
+  +        except Exception as e:
+  +            self.db.rollback()
+  +            logger.error(f"Failed to start conversion funnel for user {user_id}: {e}")
+  +            return False
+  +    
+  +    def update_conversion_stage(self, funnel_id: int, new_stage: str, metadata: Optional[Dict] = None) -> bool:
+  +        """
+  +        Update user's current stage in conversion funnel
+  +        
+  +        Args:
+  +            funnel_id: Conversion funnel ID
+  +            new_stage: New stage to transition to
+  +            metadata: Additional metadata for the stage transition
+  +            
+  +        Returns:
+  +            True if successful, False otherwise
+  +        """
+  +        try:
+  +            from database.models import ConversionFunnel
+  +            
+  +            funnel = self.db.query(ConversionFunnel).filter(
+  +                ConversionFunnel.id == funnel_id
+  +            ).first()
+  +            
+  +            if not funnel:
+  +                logger.warning(f"Conversion funnel {funnel_id} not found")
+  +                return False
+  +            
+  +            # Update stage
+  +            funnel.stage_current = new_stage
+  +            funnel.last_activity_at = datetime.now()
+  +            
+  +            # Update metadata
+  +            if metadata:
+  +                if not funnel.funnel_data:
+  +                    funnel.funnel_data = {}
+  +                funnel.funnel_data.update(metadata)
+  +            
+  +            # Track touchpoints
+  +            if funnel.funnel_data and "touchpoints" in funnel.funnel_data:
+  +                funnel.funnel_data["touchpoints"] += 1
+  +            
+  +            self.db.commit()
+  +            
+  +            # Emit event
+  +            self.event_bus.publish(
+  +                "conversion_stage_updated",
+  +                {
+  +                    "funnel_id": funnel_id,
+  +                    "user_id": funnel.user_id,
+  +                    "old_stage": funnel.stage_entered,
+  +                    "new_stage": new_stage,
+  +                    "funnel_type": funnel.funnel_type
+  +                }
+  +            )
+  +            
+  +            logger.info(f"Updated conversion funnel {funnel_id} to stage {new_stage}")
+  +            return True
+  +            
+  +        except Exception as e:
+  +            self.db.rollback()
+  +            logger.error(f"Failed to update conversion stage for funnel {funnel_id}: {e}")
+  +            return False
+  +    
+  +    def complete_conversion_funnel(self, funnel_id: int, final_stage: str, conversion_data: Dict) -> bool:
+  +        """
+  +        Mark conversion funnel as completed
+  +        
+  +        Args:
+  +            funnel_id: Conversion funnel ID
+  +            final_stage: Final stage reached
+  +            conversion_data: Data about the conversion
+  +            
+  +        Returns:
+  +            True if successful, False otherwise
+  +        """
+  +        try:
+  +            from database.models import ConversionFunnel
+  +            from sqlalchemy.sql import func
+  +            
+  +            funnel = self.db.query(ConversionFunnel).filter(
+  +                ConversionFunnel.id == funnel_id
+  +            ).first()
+  +            
+  +            if not funnel:
+  +                logger.warning(f"Conversion funnel {funnel_id} not found")
+  +                return False
+  +            
+  +            # Calculate time to convert - handle timezone mismatch
+  +            current_time = datetime.now()
+  +            entered_at = funnel.entered_at.replace(tzinfo=None) if funnel.entered_at and funnel.entered_at.tzinfo else funnel.entered_at
+  +            time_to_convert = (current_time - entered_at).total_seconds()
+  ```
+  ----------------------------------------------------------
+  📍 Línea 540 | @gemini-code-assist[bot]:
+  💬 ![critical](https://www.gstatic.com/codereviewagent/critical.svg)
+
+Estas funciones de conveniencia agravan la fuga de conexiones de base de datos al crear una nueva instancia de `SubscriptionLifecycle` en cada llamada. Cada instancia abre una nueva conexión que nunca se cierra. Este patrón debe ser eliminado. La lógica de obtención de la sesión de la base de datos debe ser manejada por el código que llama a estos métodos (por ejemplo, los comandos del bot), utilizando un `with next(get_db()) as db:` y pasando la sesión `db` a los métodos del servicio.
+  
+  Código:
+  ```
+  @@ -0,0 +1,540 @@
+  +#!/usr/bin/env python3
+  +"""
+  +Subscription Lifecycle Management
+  +Manages automated subscription workflows, conversion funnels, and lifecycle events
+  +"""
+  +
+  +import logging
+  +from datetime import datetime, timedelta
+  +from typing import Optional, Dict, Any, List
+  +from enum import Enum
+  +from sqlalchemy.orm import Session
+  +from database.connection import get_db
+  +from database.models import Subscription, User
+  +from modules.commerce.archetypes import ArchetypeEngine
+  +from core.event_bus import event_bus
+  +from core.coordinator import CoordinadorCentral
+  +
+  +logger = logging.getLogger(__name__)
+  +
+  +
+  +class SubscriptionStage(Enum):
+  +    """Subscription lifecycle stages"""
+  +    FREE_TRIAL = "free_trial"
+  +    ENGAGEMENT = "engagement"
+  +    CONSIDERATION = "consideration"
+  +    CONVERSION = "conversion"
+  +    ACTIVE_VIP = "active_vip"
+  +    RENEWAL = "renewal"
+  +    CHURN_RISK = "churn_risk"
+  +    EXPIRED = "expired"
+  +
+  +
+  +class SubscriptionLifecycle:
+  +    """Manages subscription lifecycle and conversion funnels"""
+  +    
+  +    def __init__(self):
+  +        self.db: Session = next(get_db())
+  +        self.archetype_engine = ArchetypeEngine(self.db)
+  +        self.event_bus = event_bus
+  +        self.coordinator = CoordinadorCentral(event_bus)
+  +    
+  +    def start_conversion_funnel(self, user_id: int, funnel_type: str, initial_stage: str) -> bool:
+  +        """
+  +        Start tracking a user's conversion journey
+  +        
+  +        Args:
+  +            user_id: User ID
+  +            funnel_type: Type of funnel ('free_to_vip', 'engagement_to_purchase', 'free_to_purchaser')
+  +            initial_stage: Initial stage of the funnel
+  +            
+  +        Returns:
+  +            True if successful, False otherwise
+  +        """
+  +        try:
+  +            # Import ConversionFunnel from main models
+  +            from database.models import ConversionFunnel
+  +            
+  +            # Check if user already has an active funnel of this type
+  +            existing_funnel = self.db.query(ConversionFunnel).filter(
+  +                ConversionFunnel.user_id == user_id,
+  +                ConversionFunnel.funnel_type == funnel_type,
+  +                ConversionFunnel.is_active == True
+  +            ).first()
+  +            
+  +            if existing_funnel:
+  +                logger.info(f"User {user_id} already has active {funnel_type} funnel")
+  +                return True
+  +            
+  +            # Create new conversion funnel
+  +            funnel = ConversionFunnel(
+  +                user_id=user_id,
+  +                funnel_type=funnel_type,
+  +                stage_entered=initial_stage,
+  +                stage_current=initial_stage,
+  +                stage_completed=None,
+  +                is_active=True,
+  +                is_completed=False,
+  +                funnel_data={
+  +                    "touchpoints": 0,
+  +                    "offers_shown": 0,
+  +                    "offers_clicked": 0,
+  +                    "barriers_encountered": [],
+  +                    "time_to_convert": None,
+  +                    "conversion_value": None
+  +                }
+  +            )
+  +            
+  +            self.db.add(funnel)
+  +            self.db.commit()
+  +            
+  +            # Emit event
+  +            self.event_bus.publish(
+  +                "conversion_funnel_started",
+  +                {
+  +                    "user_id": user_id,
+  +                    "funnel_type": funnel_type,
+  +                    "initial_stage": initial_stage,
+  +                    "funnel_id": funnel.id
+  +                }
+  +            )
+  +            
+  +            logger.info(f"Started {funnel_type} conversion funnel for user {user_id}")
+  +            return True
+  +            
+  +        except Exception as e:
+  +            self.db.rollback()
+  +            logger.error(f"Failed to start conversion funnel for user {user_id}: {e}")
+  +            return False
+  +    
+  +    def update_conversion_stage(self, funnel_id: int, new_stage: str, metadata: Optional[Dict] = None) -> bool:
+  +        """
+  +        Update user's current stage in conversion funnel
+  +        
+  +        Args:
+  +            funnel_id: Conversion funnel ID
+  +            new_stage: New stage to transition to
+  +            metadata: Additional metadata for the stage transition
+  +            
+  +        Returns:
+  +            True if successful, False otherwise
+  +        """
+  +        try:
+  +            from database.models import ConversionFunnel
+  +            
+  +            funnel = self.db.query(ConversionFunnel).filter(
+  +                ConversionFunnel.id == funnel_id
+  +            ).first()
+  +            
+  +            if not funnel:
+  +                logger.warning(f"Conversion funnel {funnel_id} not found")
+  +                return False
+  +            
+  +            # Update stage
+  +            funnel.stage_current = new_stage
+  +            funnel.last_activity_at = datetime.now()
+  +            
+  +            # Update metadata
+  +            if metadata:
+  +                if not funnel.funnel_data:
+  +                    funnel.funnel_data = {}
+  +                funnel.funnel_data.update(metadata)
+  +            
+  +            # Track touchpoints
+  +            if funnel.funnel_data and "touchpoints" in funnel.funnel_data:
+  +                funnel.funnel_data["touchpoints"] += 1
+  +            
+  +            self.db.commit()
+  +            
+  +            # Emit event
+  +            self.event_bus.publish(
+  +                "conversion_stage_updated",
+  +                {
+  +                    "funnel_id": funnel_id,
+  +                    "user_id": funnel.user_id,
+  +                    "old_stage": funnel.stage_entered,
+  +                    "new_stage": new_stage,
+  +                    "funnel_type": funnel.funnel_type
+  +                }
+  +            )
+  +            
+  +            logger.info(f"Updated conversion funnel {funnel_id} to stage {new_stage}")
+  +            return True
+  +            
+  +        except Exception as e:
+  +            self.db.rollback()
+  +            logger.error(f"Failed to update conversion stage for funnel {funnel_id}: {e}")
+  +            return False
+  +    
+  +    def complete_conversion_funnel(self, funnel_id: int, final_stage: str, conversion_data: Dict) -> bool:
+  +        """
+  +        Mark conversion funnel as completed
+  +        
+  +        Args:
+  +            funnel_id: Conversion funnel ID
+  +            final_stage: Final stage reached
+  +            conversion_data: Data about the conversion
+  +            
+  +        Returns:
+  +            True if successful, False otherwise
+  +        """
+  +        try:
+  +            from database.models import ConversionFunnel
+  +            from sqlalchemy.sql import func
+  +            
+  +            funnel = self.db.query(ConversionFunnel).filter(
+  +                ConversionFunnel.id == funnel_id
+  +            ).first()
+  +            
+  +            if not funnel:
+  +                logger.warning(f"Conversion funnel {funnel_id} not found")
+  +                return False
+  +            
+  +            # Calculate time to convert - handle timezone mismatch
+  +            current_time = datetime.now()
+  +            entered_at = funnel.entered_at.replace(tzinfo=None) if funnel.entered_at and funnel.entered_at.tzinfo else funnel.entered_at
+  +            time_to_convert = (current_time - entered_at).total_seconds()
+  +            
+  +            # Update funnel
+  +            funnel.stage_completed = final_stage
+  +            funnel.completed_at = current_time
+  +            funnel.is_active = False
+  +            funnel.is_completed = True
+  +            
+  +            # Update conversion data
+  +            if not funnel.funnel_data:
+  +                funnel.funnel_data = {}
+  +            
+  +            funnel.funnel_data.update({
+  +                "time_to_convert": time_to_convert,
+  +                "conversion_value": conversion_data.get("conversion_value"),
+  +                "final_stage": final_stage
+  +            })
+  +            
+  +            self.db.commit()
+  +            
+  +            # Emit event
+  +            self.event_bus.publish(
+  +                "conversion_funnel_completed",
+  +                {
+  +                    "funnel_id": funnel_id,
+  +                    "user_id": funnel.user_id,
+  +                    "funnel_type": funnel.funnel_type,
+  +                    "final_stage": final_stage,
+  +                    "time_to_convert": time_to_convert,
+  +                    "conversion_value": conversion_data.get("conversion_value")
+  +                }
+  +            )
+  +            
+  +            logger.info(f"Completed conversion funnel {funnel_id} with stage {final_stage}")
+  +            return True
+  +            
+  +        except Exception as e:
+  +            self.db.rollback()
+  +            logger.error(f"Failed to complete conversion funnel {funnel_id}: {e}")
+  +            return False
+  +    
+  +    def track_offer_interaction(self, user_id: int, offer_type: str, interaction_type: str, metadata: Dict) -> bool:
+  +        """
+  +        Track user interaction with offers
+  +        
+  +        Args:
+  +            user_id: User ID
+  +            offer_type: Type of offer ('trial', 'discount', 'upsell', 'cross_sell')
+  +            interaction_type: Type of interaction ('shown', 'clicked', 'converted', 'dismissed')
+  +            metadata: Additional metadata about the interaction
+  +            
+  +        Returns:
+  +            True if successful, False otherwise
+  +        """
+  +        try:
+  +            from database.models import ConversionFunnel
+  +            
+  +            # Get active conversion funnels for user
+  +            active_funnels = self.db.query(ConversionFunnel).filter(
+  +                ConversionFunnel.user_id == user_id,
+  +                ConversionFunnel.is_active == True
+  +            ).all()
+  +            
+  +            for funnel in active_funnels:
+  +                if not funnel.funnel_data:
+  +                    funnel.funnel_data = {}
+  +                
+  +                # Track offers shown
+  +                if interaction_type == "shown":
+  +                    funnel.funnel_data["offers_shown"] = funnel.funnel_data.get("offers_shown", 0) + 1
+  +                
+  +                # Track offers clicked
+  +                elif interaction_type == "clicked":
+  +                    funnel.funnel_data["offers_clicked"] = funnel.funnel_data.get("offers_clicked", 0) + 1
+  +                
+  +                # Track barriers
+  +                elif interaction_type == "dismissed":
+  +                    barrier = metadata.get("barrier", "unknown")
+  +                    if "barriers_encountered" not in funnel.funnel_data:
+  +                        funnel.funnel_data["barriers_encountered"] = []
+  +                    
+  +                    if barrier not in funnel.funnel_data["barriers_encountered"]:
+  +                        funnel.funnel_data["barriers_encountered"].append(barrier)
+  +            
+  +            self.db.commit()
+  +            
+  +            # Emit event
+  +            self.event_bus.publish(
+  +                "offer_interaction_tracked",
+  +                {
+  +                    "user_id": user_id,
+  +                    "offer_type": offer_type,
+  +                    "interaction_type": interaction_type,
+  +                    "metadata": metadata
+  +                }
+  +            )
+  +            
+  +            logger.info(f"Tracked {interaction_type} interaction for {offer_type} offer for user {user_id}")
+  +            return True
+  +            
+  +        except Exception as e:
+  +            self.db.rollback()
+  +            logger.error(f"Failed to track offer interaction for user {user_id}: {e}")
+  +            return False
+  +    
+  +    def get_contextual_offers(self, user_id: int) -> List[Dict[str, Any]]:
+  +        """
+  +        Get contextual offers based on user's conversion stage and archetype
+  +        
+  +        Args:
+  +            user_id: User ID
+  +            
+  +        Returns:
+  +            List of contextual offers
+  +        """
+  +        try:
+  +            from database.models import ConversionFunnel
+  +            
+  +            # Get user archetype
+  +            archetype_data = self.archetype_engine.detect_archetype(user_id)
+  +            archetype = archetype_data.get('primary_archetype', 'explorer')
+  +            
+  +            # Get active conversion funnels
+  +            active_funnels = self.db.query(ConversionFunnel).filter(
+  +                ConversionFunnel.user_id == user_id,
+  +                ConversionFunnel.is_active == True
+  +            ).all()
+  +            
+  +            offers = []
+  +            
+  +            for funnel in active_funnels:
+  +                stage_offers = self._get_offers_for_stage(funnel.stage_current, archetype)
+  +                offers.extend(stage_offers)
+  +            
+  +            # Limit to 3 most relevant offers
+  +            offers = offers[:3]
+  +            
+  +            # Track offers shown
+  +            for offer in offers:
+  +                self.track_offer_interaction(
+  +                    user_id=user_id,
+  +                    offer_type=offer.get("type", "unknown"),
+  +                    interaction_type="shown",
+  +                    metadata={"offer_id": offer.get("id")}
+  +                )
+  +            
+  +            return offers
+  +            
+  +        except Exception as e:
+  +            logger.error(f"Failed to get contextual offers for user {user_id}: {e}")
+  +            return []
+  +    
+  +    def _get_offers_for_stage(self, stage: str, archetype: str) -> List[Dict[str, Any]]:
+  +        """
+  +        Get offers for specific conversion stage and archetype
+  +        
+  +        Args:
+  +            stage: Conversion stage
+  +            archetype: User archetype
+  +            
+  +        Returns:
+  +            List of offers
+  +        """
+  +        # Base offers by stage
+  +        stage_offers = {
+  +            SubscriptionStage.FREE_TRIAL.value: [
+  +                {
+  +                    "id": "free_trial_7d",
+  +                    "type": "trial",
+  +                    "title": "7-Day Free Trial",
+  +                    "description": "Experience VIP features for 7 days",
+  +                    "value": "free",
+  +                    "duration_days": 7,
+  +                    "priority": 1
+  +                }
+  +            ],
+  +            SubscriptionStage.ENGAGEMENT.value: [
+  +                {
+  +                    "id": "engagement_discount_20",
+  +                    "type": "discount",
+  +                    "title": "20% Engagement Discount",
+  +                    "description": "Special discount for active users",
+  +                    "value": "20% off",
+  +                    "priority": 2
+  +                }
+  +            ],
+  +            SubscriptionStage.CONSIDERATION.value: [
+  +                {
+  +                    "id": "monthly_subscription",
+  +                    "type": "subscription",
+  +                    "title": "Monthly VIP Access",
+  +                    "description": "Full VIP features for one month",
+  +                    "value": "$9.99/month",
+  +                    "duration_days": 30,
+  +                    "priority": 1
+  +                }
+  +            ],
+  +            SubscriptionStage.CONVERSION.value: [
+  +                {
+  +                    "id": "yearly_subscription",
+  +                    "type": "subscription",
+  +                    "title": "Yearly VIP (Best Value)",
+  +                    "description": "Save 40% with yearly subscription",
+  +                    "value": "$59.99/year",
+  +                    "duration_days": 365,
+  +                    "priority": 1
+  +                }
+  +            ],
+  +            SubscriptionStage.ACTIVE_VIP.value: [
+  +                {
+  +                    "id": "referral_bonus",
+  +                    "type": "upsell",
+  +                    "title": "Refer a Friend",
+  +                    "description": "Get 1 month free for each friend who subscribes",
+  +                    "value": "free_month",
+  +                    "priority": 3
+  +                }
+  +            ],
+  +            SubscriptionStage.RENEWAL.value: [
+  +                {
+  +                    "id": "renewal_discount_15",
+  +                    "type": "discount",
+  +                    "title": "Renewal Special",
+  +                    "description": "15% off for loyal customers",
+  +                    "value": "15% off",
+  +                    "priority": 1
+  +                }
+  +            ],
+  +            SubscriptionStage.CHURN_RISK.value: [
+  +                {
+  +                    "id": "winback_offer",
+  +                    "type": "winback",
+  +                    "title": "We Miss You!",
+  +                    "description": "Special offer to keep your VIP benefits",
+  +                    "value": "25% off next month",
+  +                    "priority": 1
+  +                }
+  +            ]
+  +        }
+  +        
+  +        # Archetype-specific adjustments
+  +        archetype_modifiers = {
+  +            "explorer": {"description_suffix": " - Perfect for discovering new content"},
+  +            "collector": {"description_suffix": " - Build your exclusive collection"},
+  +            "socializer": {"description_suffix": " - Share with your community"},
+  +            "achiever": {"description_suffix": " - Unlock advanced achievements"}
+  +        }
+  +        
+  +        offers = stage_offers.get(stage, [])
+  +        
+  +        # Apply archetype customization
+  +        if archetype in archetype_modifiers:
+  +            for offer in offers:
+  +                offer["description"] += archetype_modifiers[archetype]["description_suffix"]
+  +        
+  +        return offers
+  +    
+  +    def handle_subscription_conversion(self, user_id: int, subscription_type: str, payment_data: Dict) -> bool:
+  +        """
+  +        Handle subscription conversion and complete relevant funnels
+  +        
+  +        Args:
+  +            user_id: User ID
+  +            subscription_type: Type of subscription
+  +            payment_data: Payment information
+  +            
+  +        Returns:
+  +            True if successful, False otherwise
+  +        """
+  +        try:
+  +            from database.models import ConversionFunnel
+  +            
+  +            # Get active conversion funnels
+  +            active_funnels = self.db.query(ConversionFunnel).filter(
+  +                ConversionFunnel.user_id == user_id,
+  +                ConversionFunnel.is_active == True
+  +            ).all()
+  +            
+  +            conversion_value = payment_data.get("amount", 0)
+  +            
+  +            for funnel in active_funnels:
+  +                # Complete the funnel
+  +                self.complete_conversion_funnel(
+  +                    funnel_id=funnel.id,
+  +                    final_stage=SubscriptionStage.CONVERSION.value,
+  +                    conversion_data={
+  +                        "conversion_value": conversion_value,
+  +                        "subscription_type": subscription_type,
+  +                        "payment_method": payment_data.get("payment_method")
+  +                    }
+  +                )
+  +            
+  +            # Emit conversion event
+  +            self.event_bus.publish(
+  +                "subscription_converted",
+  +                {
+  +                    "user_id": user_id,
+  +                    "subscription_type": subscription_type,
+  +                    "conversion_value": conversion_value,
+  +                    "payment_data": payment_data
+  +                }
+  +            )
+  +            
+  +            logger.info(f"Handled subscription conversion for user {user_id}")
+  +            return True
+  +            
+  +        except Exception as e:
+  +            logger.error(f"Failed to handle subscription conversion for user {user_id}: {e}")
+  +            return False
+  +
+  +
+  +# Global instance
+  +subscription_lifecycle = SubscriptionLifecycle()
+  +
+  +
+  +# Convenience functions
+  +def start_conversion_funnel(user_id: int, funnel_type: str, initial_stage: str) -> bool:
+  +    """Start tracking a user's conversion journey"""
+  +    service = SubscriptionLifecycle()
+  +    return service.start_conversion_funnel(user_id, funnel_type, initial_stage)
+  +
+  +def update_conversion_stage(funnel_id: int, new_stage: str, metadata: Optional[Dict] = None) -> bool:
+  +    """Update user's current stage in conversion funnel"""
+  +    service = SubscriptionLifecycle()
+  +    return service.update_conversion_stage(funnel_id, new_stage, metadata)
+  +
+  +def complete_conversion_funnel(funnel_id: int, final_stage: str, conversion_data: Dict) -> bool:
+  +    """Mark conversion funnel as completed"""
+  +    service = SubscriptionLifecycle()
+  +    return service.complete_conversion_funnel(funnel_id, final_stage, conversion_data)
+  +
+  +def track_offer_interaction(user_id: int, offer_type: str, interaction_type: str, metadata: Dict) -> bool:
+  +    """Track user interaction with offers"""
+  +    service = SubscriptionLifecycle()
+  +    return service.track_offer_interaction(user_id, offer_type, interaction_type, metadata)
+  +
+  +def get_contextual_offers(user_id: int) -> List[Dict[str, Any]]:
+  +    """Get contextual offers based on user's conversion stage and archetype"""
+  +    service = SubscriptionLifecycle()
+  +    return service.get_contextual_offers(user_id)
+  +
+  +def handle_subscription_conversion(user_id: int, subscription_type: str, payment_data: Dict) -> bool:
+  +    """Handle subscription conversion and complete relevant funnels"""
+  +    service = SubscriptionLifecycle()
+  +    return service.handle_subscription_conversion(user_id, subscription_type, payment_data)
+  ```
+  ----------------------------------------------------------
+
+📄 ARCHIVO: test_complete_subscription_flow.py
+============================================================
+  📍 Línea 8 | @gemini-code-assist[bot]:
+  💬 ![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+El uso de `sys.path.insert` es una mala práctica, también en los tests. Indica un problema en la estructura del proyecto o en cómo se ejecutan los tests. El proyecto debería estar configurado como un paquete de Python para que los imports absolutos funcionen sin necesidad de manipular el `sys.path`.
+  
+  Código:
+  ```
+  @@ -0,0 +1,150 @@
+  +#!/usr/bin/env python3
+  +"""
+  +Test complete subscription conversion flow
+  +"""
+  +
+  +import sys
+  +import os
+  +sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+  ```
+  ----------------------------------------------------------
+
+📄 ARCHIVO: test_subscription_lifecycle.py
+============================================================
+  📍 Línea 8 | @gemini-code-assist[bot]:
+  💬 ![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+El uso de `sys.path.insert` es una mala práctica, también en los tests. Indica un problema en la estructura del proyecto o en cómo se ejecutan los tests. El proyecto debería estar configurado como un paquete de Python para que los imports absolutos funcionen sin necesidad de manipular el `sys.path`.
+  
+  Código:
+  ```
+  @@ -0,0 +1,52 @@
+  +#!/usr/bin/env python3
+  +"""
+  +Test for Subscription Lifecycle Management
+  +"""
+  +
+  +import sys
+  +import os
+  +sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+  ```
+  ----------------------------------------------------------
+  📍 Línea 43 | @gemini-code-assist[bot]:
+  💬 ![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+Este test no contiene ninguna aserción (`assert`). Solo imprime mensajes a la consola. Un test debe verificar que el código se comporta como se espera, fallando si no lo hace. Sin aserciones, el test pasará siempre que no se produzca una excepción, lo cual no garantiza que la lógica sea correcta. Deberías añadir aserciones para validar los resultados de las funciones.
+
+```python
+def test_subscription_lifecycle():
+    """Test basic subscription lifecycle functionality"""
+    print("Testing Subscription Lifecycle...")
+    
+    # Create instance
+    # Esto debería usar un fixture de pytest para manejar la sesión de DB
+    lifecycle = SubscriptionLifecycle()
+    print("✓ SubscriptionLifecycle instance created")
+    
+    # Test starting conversion funnel
+    result = lifecycle.start_conversion_funnel(
+        user_id=1, 
+        funnel_type="free_to_vip", 
+        initial_stage="free_trial"
+    )
+    assert result is True, "start_conversion_funnel should return True"
+    print(f"✓ start_conversion_funnel: {result}")
+    
+    # Test getting contextual offers
+    offers = lifecycle.get_contextual_offers(user_id=1)
+    assert isinstance(offers, list), "get_contextual_offers should return a list"
+    print(f"✓ get_contextual_offers: {len(offers)} offers")
+    
+    # Test tracking offer interaction
+    track_result = lifecycle.track_offer_interaction(
+        user_id=1,
+        offer_type="trial",
+        interaction_type="shown",
+        metadata={"offer_id": "free_trial_7d"}
+    )
+    assert track_result is True, "track_offer_interaction should return True"
+    print(f"✓ track_offer_interaction: {track_result}")
+    
+    print("✓ All subscription lifecycle tests passed!")
+    return True
+```
+  
+  Código:
+  ```
+  @@ -0,0 +1,52 @@
+  +#!/usr/bin/env python3
+  +"""
+  +Test for Subscription Lifecycle Management
+  +"""
+  +
+  +import sys
+  +import os
+  +sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+  +
+  +from modules.admin.subscription_lifecycle import SubscriptionLifecycle
+  +
+  +def test_subscription_lifecycle():
+  +    """Test basic subscription lifecycle functionality"""
+  +    print("Testing Subscription Lifecycle...")
+  +    
+  +    try:
+  +        # Create instance
+  +        lifecycle = SubscriptionLifecycle()
+  +        print("✓ SubscriptionLifecycle instance created")
+  +        
+  +        # Test starting conversion funnel
+  +        result = lifecycle.start_conversion_funnel(
+  +            user_id=1, 
+  +            funnel_type="free_to_vip", 
+  +            initial_stage="free_trial"
+  +        )
+  +        print(f"✓ start_conversion_funnel: {result}")
+  +        
+  +        # Test getting contextual offers
+  +        offers = lifecycle.get_contextual_offers(user_id=1)
+  +        print(f"✓ get_contextual_offers: {len(offers)} offers")
+  +        
+  +        # Test tracking offer interaction
+  +        track_result = lifecycle.track_offer_interaction(
+  +            user_id=1,
+  +            offer_type="trial",
+  +            interaction_type="shown",
+  +            metadata={"offer_id": "free_trial_7d"}
+  +        )
+  +        print(f"✓ track_offer_interaction: {track_result}")
+  +        
+  +        print("✓ All subscription lifecycle tests passed!")
+  +        return True
+  ```
+  ----------------------------------------------------------
+
+
+============================================================
+RESUMEN:
+------------------------------------------------------------
+  📝 Comentarios en conversación: 1
+  ⭐ Reviews generales: 1
+  📄 Comentarios en código: 12
+============================================================
