@@ -6,10 +6,10 @@ múltiples elementos de diferentes sistemas en flujos cohesivos.
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
-from database.connection import get_db
+from sqlalchemy.orm import Session
 from database.models import (
     Experience, ExperienceComponent, UserExperienceProgress, 
     UserComponentCompletion, ExperienceRequirement, ExperienceReward
@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 class ExperienceEngine:
     """Motor principal para gestionar experiencias unificadas"""
     
-    def __init__(self):
-        self.db = next(get_db())
+    def __init__(self, db: Session):
+        self.db = db
     
     def start_experience(self, user_id: int, experience_id: int) -> Dict[str, Any]:
         """
@@ -82,8 +82,8 @@ class ExperienceEngine:
                 experience_id=experience_id,
                 status='in_progress',
                 current_component_id=first_component.id,
-                started_at=datetime.utcnow(),
-                last_activity_at=datetime.utcnow(),
+                started_at=datetime.now(timezone.utc),
+                last_activity_at=datetime.now(timezone.utc),
                 completion_percentage=0.0,
                 components_completed=0,
                 components_total=self._get_total_components(experience_id)
@@ -95,7 +95,7 @@ class ExperienceEngine:
             # Actualizar contador de inicios
             experience = self.db.query(Experience).filter(Experience.id == experience_id).first()
             if experience:
-                experience.start_count += 1
+                experience.start_count = experience.start_count + 1
                 self.db.commit()
             
             logger.info(f"Experiencia {experience_id} iniciada para usuario {user_id}")
@@ -169,7 +169,7 @@ class ExperienceEngine:
             component_completion = UserComponentCompletion(
                 user_progress_id=user_progress.id,
                 component_id=component_id,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 completion_data=completion_data or {}
             )
             
@@ -177,7 +177,7 @@ class ExperienceEngine:
             
             # Actualizar progreso
             user_progress.components_completed += 1
-            user_progress.last_activity_at = datetime.utcnow()
+            user_progress.last_activity_at = datetime.now(timezone.utc)
             
             # Calcular porcentaje de completitud
             total_components = user_progress.components_total
@@ -243,7 +243,7 @@ class ExperienceEngine:
             user_progress.status = 'completed'
             user_progress.completed_at = datetime.utcnow()
             user_progress.completion_percentage = 100.0
-            user_progress.last_activity_at = datetime.utcnow()
+            user_progress.last_activity_at = datetime.now(timezone.utc)
             
             # Otorgar recompensas finales
             experience_rewards = self.db.query(ExperienceReward).filter(
@@ -261,16 +261,17 @@ class ExperienceEngine:
             # Actualizar contador de completitudes
             experience = self.db.query(Experience).filter(Experience.id == experience_id).first()
             if experience:
-                experience.completion_count += 1
+                experience.completion_count = experience.completion_count + 1
                 # Calcular tiempo promedio de completitud
                 if user_progress.started_at and user_progress.completed_at:
                     completion_time = (user_progress.completed_at - user_progress.started_at).total_seconds() / 60
-                    if experience.average_completion_time == 0:
+                    total_completions = experience.completion_count
+                    if total_completions == 1:
                         experience.average_completion_time = completion_time
                     else:
-                        experience.average_completion_time = (
-                            experience.average_completion_time + completion_time
-                        ) / 2
+                        # Fórmula correcta para promedio móvil: new_avg = ((old_avg * (n-1)) + new_value) / n
+                        old_avg = experience.average_completion_time
+                        experience.average_completion_time = ((old_avg * (total_completions - 1)) + completion_time) / total_completions
             
             self.db.commit()
             

@@ -8,7 +8,7 @@ para determinar si un usuario puede iniciar o progresar en una experiencia.
 from typing import Dict, List, Optional, Any, Tuple
 import logging
 
-from database.connection import get_db
+from sqlalchemy.orm import Session
 from database.models import (
     User, UserBalance, UserInventory, UserAchievement, 
     ExperienceRequirement, VIPSubscription
@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 class CompositeValidator:
     """Validador de requisitos compuestos"""
     
-    def __init__(self):
-        self.db = next(get_db())
+    def __init__(self, db: Session):
+        self.db = db
     
     def validate_composite_requirements(self, user_id: int, requirements: List[Dict]) -> Dict[str, Any]:
         """
@@ -166,7 +166,7 @@ class CompositeValidator:
         # Verificar suscripción VIP activa
         vip_subscription = self.db.query(VIPSubscription).filter(
             VIPSubscription.user_id == user_id,
-            VIPSubscription.is_active == True
+            VIPSubscription.is_active
         ).first()
         
         is_met = vip_subscription is not None

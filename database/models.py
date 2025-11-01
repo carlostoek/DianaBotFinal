@@ -1053,7 +1053,8 @@ class ShopItem(Base):
     
     # Relaciones
     purchases = relationship("UserPurchase", back_populates="shop_item")
-    game_item = relationship("Item", back_populates="shop_item", uselist=False)
+    # TODO: Fix this relationship - missing foreign key and corresponding relationship in Item model
+    # game_item = relationship("Item", back_populates="shop_item", uselist=False)
 
     def __repr__(self):
         return f"<ShopItem(name={self.name}, type={self.type}, price_besitos={self.price_besitos})>"
