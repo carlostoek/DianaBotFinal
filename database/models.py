@@ -203,6 +203,7 @@ class NarrativeFragment(Base):
     order_index = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True)
     is_starting_fragment = Column(Boolean, default=False)
+    is_secret = Column(Boolean, default=False)  # Fragmento oculto que requiere descubrimiento
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
@@ -702,4 +703,54 @@ class Bid(Base):
             "amount": self.amount,
             "is_winning": self.is_winning,
             "created_at": self.created_at
+        }
+
+
+class SecretCode(Base):
+    """Secret code model for hidden fragment discovery"""
+    __tablename__ = "secret_codes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(100), unique=True, nullable=False, index=True)
+    fragment_key = Column(String(100), nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<SecretCode(code={self.code}, fragment_key={self.fragment_key})>"
+
+    def to_dict(self):
+        """Convert secret code to dictionary"""
+        return {
+            "id": self.id,
+            "code": self.code,
+            "fragment_key": self.fragment_key,
+            "description": self.description,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
+
+
+class UserSecretDiscovery(Base):
+    """User secret discovery tracking"""
+    __tablename__ = "user_secret_discoveries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    secret_code_id = Column(Integer, ForeignKey("secret_codes.id"), nullable=True, index=True)
+    fragment_key = Column(String(100), nullable=False, index=True)
+    discovered_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<UserSecretDiscovery(user_id={self.user_id}, fragment_key={self.fragment_key})>"
+
+    def to_dict(self):
+        """Convert user secret discovery to dictionary"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "secret_code_id": self.secret_code_id,
+            "fragment_key": self.fragment_key,
+            "discovered_at": self.discovered_at.isoformat() if hasattr(self.discovered_at, 'isoformat') else None
         }
