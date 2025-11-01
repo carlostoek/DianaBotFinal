@@ -31,23 +31,38 @@ async def daily_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         
-        logger.info(f"Processing daily reward for user {db_user.id} (telegram: {user.id})")
+        user_id = db_user.id
+        logger.info(f"Processing daily reward for user {user_id} (telegram: {user.id})")
         
         # Claim daily reward
-        amount = daily_reward_service.claim_daily_reward(db_user.id)
-        logger.info(f"Daily reward claim result: {amount}")
+        reward_result = daily_reward_service.claim_daily_reward(user_id)
+        logger.info(f"Daily reward claim result: {reward_result}")
         
-        if amount is not None:
-            # Success message
-            current_balance = besitos_service.get_balance(db_user.id)
+        if reward_result is not None:
+            # Success message with streak info
+            current_balance = besitos_service.get_balance(user_id)
             logger.info(f"Current balance after reward: {current_balance}")
+            
+            # Build streak message
+            streak_message = ""
+            if reward_result['streak_bonus'] > 0:
+                streak_message = f"\n🔥 *¡Bonus de Racha!* +{reward_result['streak_bonus']} besitos"
+            
+            next_bonus_message = ""
+            if reward_result['next_streak_bonus']:
+                next_bonus = reward_result['next_streak_bonus']
+                next_bonus_message = f"\n🎯 *Próximo bonus:* +{next_bonus['bonus_amount']} besitos en {next_bonus['days_needed']} días"
             
             success_text = (
                 f"🎉 *¡Recompensa Diaria Reclamada!*\n\n"
-                f"💋 Has recibido **{amount} besitos**\n\n"
+                f"💋 Has recibido **{reward_result['total_amount']} besitos**\n"
+                f"📊 *Desglose:* {reward_result['base_amount']} base + {reward_result['streak_bonus']} bonus\n"
+                f"🔥 *Racha actual:* {reward_result['new_streak']} días consecutivos"
+                f"{streak_message}"
+                f"{next_bonus_message}\n\n"
                 f"💰 *Nuevo balance:* **{current_balance}** 💋\n\n"
                 f"⏰ *Próxima recompensa:* Mañana a esta misma hora\n\n"
-                f"💡 *Consejo:* Vuelve cada día para acumular más besitos!"
+                f"💡 *Consejo:* Vuelve cada día para mantener tu racha y ganar más!"
             )
             
             await update.message.reply_text(success_text, parse_mode="Markdown")
