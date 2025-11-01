@@ -1,0 +1,98 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+htmlcov/
+.cov/
+.coverage.*
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git/index.lock
+.pydevproject
+.vscode/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.db-journal
+
+# Media and uploads
+media_uploads/
+backups/
+
+# Logs
+logs/
+*.log
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Docker
+.dockerenv
+.dockerinit
+
+# Documentation
+docs/_build/
+
+# Local config
+config/local.py
+*.local
+
+# Alembic
+alembic/versions/000000000000_.py
+
+# Secrets
+secrets/
+*.key
+*.pem
+*.crt
+*.cert
+
+# Development
+.DS_Store
+*.pyc
+*~

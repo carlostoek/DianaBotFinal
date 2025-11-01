@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Publicaciones - DianaBot Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-2xl font-bold text-gray-900">DianaBot Dashboard</h1>
+                    <nav class="flex space-x-4">
+                        <a href="/dashboard" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+                        <a href="/dashboard/users" class="text-gray-500 hover:text-gray-700">Usuarios</a>
+                        <a href="/dashboard/content" class="text-gray-500 hover:text-gray-700">Contenido</a>
+                        <a href="/dashboard/posts" class="text-blue-600 font-medium">Publicaciones</a>
+                        <a href="/dashboard/config" class="text-gray-500 hover:text-gray-700">Configuración</a>
+                        <a href="/dashboard/analytics" class="text-gray-500 hover:text-gray-700">Analíticas</a>
+                    </nav>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600">Admin</span>
+                    <button @click="logout()" class="text-sm text-red-600 hover:text-red-800">Cerrar Sesión</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8" x-data="postsManager()">
+        <!-- Tabs Navigation -->
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="-mb-px flex space-x-8">
+                <button @click="activeTab = 'calendar'" 
+                        :class="activeTab === 'calendar' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Calendario
+                </button>
+                <button @click="activeTab = 'scheduled'" 
+                        :class="activeTab === 'scheduled' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Programados
+                </button>
+                <button @click="activeTab = 'published'" 
+                        :class="activeTab === 'published' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Publicados
+                </button>
+            </nav>
+        </div>
+
+        <!-- Calendar Tab -->
+        <div x-show="activeTab === 'calendar'">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold text-gray-900">Calendario de Publicaciones</h2>
+                <button @click="showPostModal = true" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                    + Nueva Publicación
+                </button>
+            </div>
+
+            <!-- Calendar -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <div id="calendar"></div>
+            </div>
+        </div>
+
+        <!-- Scheduled Posts Tab -->
+        <div x-show="activeTab === 'scheduled'">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold text-gray-900">Publicaciones Programadas</h2>
+                <div class="flex space-x-2">
+                    <button @click="showPostModal = true" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                        + Nueva Publicación
+                    </button>
+                    <button @click="publishAll()" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                        Publicar Todo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Scheduled Posts Table -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contenido</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Canal</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Programado para</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <template x-for="post in scheduledPosts" :key="post.id">
+                            <tr>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm text-gray-900 font-medium" x-text="post.content.substring(0, 50) + '...'"></div>
+                                    <div class="text-xs text-gray-500" x-text="post.type"></div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="post.channel"></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="formatDate(post.scheduled_for)"></td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span :class="{
+                                        'bg-yellow-100 text-yellow-800': post.status === 'scheduled',
+                                        'bg-blue-100 text-blue-800': post.status === 'processing',
+                                        'bg-red-100 text-red-800': post.status === 'failed'
+                                    }" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" x-text="post.status"></span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <button @click="editPost(post)" class="text-blue-600 hover:text-blue-900 mr-3">Editar</button>
+                                    <button @click="publishNow(post.id)" class="text-green-600 hover:text-green-900 mr-3">Publicar Ahora</button>
+                                    <button @click="deletePost(post.id)" class="text-red-600 hover:text-red-900">Eliminar</button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Published Posts Tab -->
+        <div x-show="activeTab === 'published'">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold text-gray-900">Publicaciones Realizadas</h2>
+                <div class="flex space-x-2">
+                    <select x-model="publishedFilter" class="border border-gray-300 rounded-md px-3 py-2">
+                        <option value="all">Todos</option>
+                        <option value="today">Hoy</option>
+                        <option value="week">Esta semana</option>
+                        <option value="month">Este mes</option>
+                    </select>
+                    <select x-model="channelFilter" class="border border-gray-300 rounded-md px-3 py-2">
+                        <option value="">Todos los canales</option>
+                        <option value="VIP">VIP</option>
+                        <option value="General">General</option>
+                        <option value="Eventos">Eventos</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Published Posts Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="post in filteredPublishedPosts" :key="post.id">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900" x-text="post.type"></h3>
+                            <span class="text-xs text-gray-500" x-text="formatDate(post.published_at)"></span>
+                        </div>
+                        <p class="text-gray-600 text-sm mb-4" x-text="post.content.substring(0, 100) + (post.content.length > 100 ? '...' : '')"></p>
+                        <div class="flex justify-between items-center text-sm text-gray-500">
+                            <span x-text="post.channel"></span>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-green-600" x-text="`👍 ${post.reactions.likes}`"></span>
+                                <span class="text-red-600" x-text="`👎 ${post.reactions.dislikes}`"></span>
+                                <span class="text-blue-600" x-text="`💬 ${post.reactions.comments}`"></span>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex space-x-2">
+                            <button @click="viewPostAnalytics(post.id)" class="text-blue-600 hover:text-blue-900 text-sm">Analíticas</button>
+                            <button @click="repost(post.id)" class="text-green-600 hover:text-green-900 text-sm">Republicar</button>
+                            <button @click="deletePost(post.id)" class="text-red-600 hover:text-red-900 text-sm">Eliminar</button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Post Modal -->
+    <div x-show="showPostModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+        <div class="relative top-20 mx-auto p-5 border w-3/4 shadow-lg rounded-md bg-white">
+            <h3 class="text-lg font-medium text-gray-900 mb-4" x-text="editingPost ? 'Editar Publicación' : 'Nueva Publicación'"></h3>
+            <form @submit.prevent="savePost()">
+                <div class="grid grid-cols-1 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Tipo de Publicación</label>
+                        <select x-model="currentPost.type" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                            <option value="narrative">Fragmento Narrativo</option>
+                            <option value="mission">Misión</option>
+                            <option value="trivia">Trivia</option>
+                            <option value="announcement">Anuncio</option>
+                            <option value="event">Evento</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Canal</label>
+                        <select x-model="currentPost.channel" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                            <option value="VIP">VIP</option>
+                            <option value="General">General</option>
+                            <option value="Eventos">Eventos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Contenido</label>
+                        <textarea x-model="currentPost.content" rows="6" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Fecha y Hora de Publicación</label>
+                        <input type="datetime-local" x-model="currentPost.scheduled_for" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                    </div>
+                    <div x-show="currentPost.type === 'narrative'">
+                        <label class="block text-sm font-medium text-gray-700">Fragmento Narrativo</label>
+                        <select x-model="currentPost.fragment_id" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                            <option value="">Seleccionar fragmento...</option>
+                            <option value="1">El Encuentro Inicial</option>
+                            <option value="2">El Misterio del Jardín</option>
+                            <option value="3">La Decisión Difícil</option>
+                        </select>
+                    </div>
+                    <div x-show="currentPost.type === 'mission'">
+                        <label class="block text-sm font-medium text-gray-700">Misión</label>
+                        <select x-model="currentPost.mission_id" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                            <option value="">Seleccionar misión...</option>
+                            <option value="1">Búsqueda Semanal</option>
+                            <option value="2">Explorador Novato</option>
+                            <option value="3">Festival de Otoño</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" @click="showPostModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function postsManager() {
+            return {
+                activeTab: 'calendar',
+                showPostModal: false,
+                editingPost: false,
+                publishedFilter: 'all',
+                channelFilter: '',
+                
+                // Posts data
+                scheduledPosts: [
+                    { 
+                        id: 1, 
+                        content: '¡Nuevo fragmento narrativo disponible! Descubre los secretos del jardín prohibido...', 
+                        type: 'narrative', 
+                        channel: 'VIP', 
+                        scheduled_for: '2025-11-01T20:00:00', 
+                        status: 'scheduled' 
+                    },
+                    { 
+                        id: 2, 
+                        content: 'Misión semanal: Completa 3 fragmentos para obtener 500 besitos extra', 
+                        type: 'mission', 
+                        channel: 'General', 
+                        scheduled_for: '2025-11-02T10:00:00', 
+                        status: 'scheduled' 
+                    }
+                ],
+                
+                publishedPosts: [
+                    { 
+                        id: 3, 
+                        content: '¡Bienvenidos al nuevo capítulo de la historia! Lucien tiene un secreto que compartir...', 
+                        type: 'narrative', 
+                        channel: 'VIP', 
+                        published_at: '2025-10-31T15:30:00', 
+                        reactions: { likes: 124, dislikes: 5, comments: 23 }
+                    },
+                    { 
+                        id: 4, 
+                        content: 'Trivia del día: ¿Cuál es el nombre del personaje principal?', 
+                        type: 'trivia', 
+                        channel: 'General', 
+                        published_at: '2025-10-31T12:00:00', 
+                        reactions: { likes: 89, dislikes: 2, comments: 45 }
+                    }
+                ],
+                
+                currentPost: {
+                    type: 'narrative',
+                    channel: 'VIP',
+                    content: '',
+                    scheduled_for: '',
+                    fragment_id: '',
+                    mission_id: ''
+                },
+
+                get filteredPublishedPosts() {
+                    let filtered = this.publishedPosts;
+                    
+                    // Filter by date
+                    const now = new Date();
+                    if (this.publishedFilter === 'today') {
+                        filtered = filtered.filter(post => {
+                            const postDate = new Date(post.published_at);
+                            return postDate.toDateString() === now.toDateString();
+                        });
+                    } else if (this.publishedFilter === 'week') {
+                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        filtered = filtered.filter(post => new Date(post.published_at) >= weekAgo);
+                    } else if (this.publishedFilter === 'month') {
+                        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        filtered = filtered.filter(post => new Date(post.published_at) >= monthAgo);
+                    }
+                    
+                    // Filter by channel
+                    if (this.channelFilter) {
+                        filtered = filtered.filter(post => post.channel === this.channelFilter);
+                    }
+                    
+                    return filtered;
+                },
+
+                formatDate(dateString) {
+                    return new Date(dateString).toLocaleString('es-ES');
+                },
+
+                editPost(post) {
+                    this.currentPost = { ...post };
+                    this.editingPost = true;
+                    this.showPostModal = true;
+                },
+
+                savePost() {
+                    if (this.editingPost) {
+                        const index = this.scheduledPosts.findIndex(p => p.id === this.currentPost.id);
+                        this.scheduledPosts[index] = { ...this.currentPost };
+                    } else {
+                        const newId = Math.max(...this.scheduledPosts.map(p => p.id)) + 1;
+                        this.scheduledPosts.push({ 
+                            ...this.currentPost, 
+                            id: newId, 
+                            status: 'scheduled' 
+                        });
+                    }
+                    this.showPostModal = false;
+                    this.currentPost = {
+                        type: 'narrative',
+                        channel: 'VIP',
+                        content: '',
+                        scheduled_for: '',
+                        fragment_id: '',
+                        mission_id: ''
+                    };
+                    this.editingPost = false;
+                },
+
+                publishNow(id) {
+                    const post = this.scheduledPosts.find(p => p.id === id);
+                    if (post && confirm('¿Publicar esta publicación ahora?')) {
+                        // Move to published
+                        this.publishedPosts.unshift({
+                            ...post,
+                            published_at: new Date().toISOString(),
+                            reactions: { likes: 0, dislikes: 0, comments: 0 }
+                        });
+                        
+                        // Remove from scheduled
+                        this.scheduledPosts = this.scheduledPosts.filter(p => p.id !== id);
+                        
+                        alert('Publicación realizada con éxito');
+                    }
+                },
+
+                publishAll() {
+                    if (confirm('¿Publicar todas las publicaciones programadas?')) {
+                        this.scheduledPosts.forEach(post => {
+                            this.publishedPosts.unshift({
+                                ...post,
+                                published_at: new Date().toISOString(),
+                                reactions: { likes: 0, dislikes: 0, comments: 0 }
+                            });
+                        });
+                        this.scheduledPosts = [];
+                        alert('Todas las publicaciones han sido publicadas');
+                    }
+                },
+
+                deletePost(id) {
+                    if (confirm('¿Estás seguro de eliminar esta publicación?')) {
+                        this.scheduledPosts = this.scheduledPosts.filter(p => p.id !== id);
+                        this.publishedPosts = this.publishedPosts.filter(p => p.id !== id);
+                    }
+                },
+
+                viewPostAnalytics(id) {
+                    alert('Ver analíticas del post: ' + id);
+                },
+
+                repost(id) {
+                    const post = this.publishedPosts.find(p => p.id === id);
+                    if (post) {
+                        this.currentPost = { ...post };
+                        this.currentPost.scheduled_for = '';
+                        this.editingPost = false;
+                        this.showPostModal = true;
+                    }
+                },
+
+                logout() {
+                    localStorage.removeItem('token');
+                    window.location.href = '/dashboard/login';
+                },
+
+                initCalendar() {
+                    const calendarEl = document.getElementById('calendar');
+                    if (calendarEl) {
+                        const calendar = new FullCalendar.Calendar(calendarEl, {
+                            initialView: 'dayGridMonth',
+                            locale: 'es',
+                            headerToolbar: {
+                                left: 'prev,next today',
+                                center: 'title',
+                                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                            },
+                            events: [
+                                {
+                                    title: 'Fragmento Narrativo - VIP',
+                                    start: '2025-11-01T20:00:00',
+                                    color: '#3B82F6'
+                                },
+                                {
+                                    title: 'Misión Semanal - General',
+                                    start: '2025-11-02T10:00:00',
+                                    color: '#10B981'
+                                }
+                            ],
+                            eventClick: function(info) {
+                                alert('Evento: ' + info.event.title);
+                            }
+                        });
+                        calendar.render();
+                    }
+                }
+            }
+        }
+
+        // Initialize calendar when page loads
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('postsManager', postsManager);
+            
+            // Initialize calendar when calendar tab is active
+            const observer = new MutationObserver(() => {
+                const calendarTab = document.querySelector('[x-show="activeTab === \'calendar\'"]');
+                if (calendarTab && calendarTab.style.display !== 'none') {
+                    postsManager().initCalendar();
+                }
+            });
+            
+            observer.observe(document.body, { 
+                childList: true, 
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['style']
+            });
+        });
+    </script>
+</body>
+</html>

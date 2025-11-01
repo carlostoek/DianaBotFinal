@@ -1,0 +1,439 @@
+{% extends "base.html" %}
+
+{% block title %}DianaBot - Configuración{% endblock %}
+
+{% block header_title %}Configuración{% endblock %}
+
+{% block content %}
+<div x-data="configManager()" class="space-y-6">
+    <!-- Tabs Navigation -->
+    <div class="border-b border-gray-200">
+        <nav class="-mb-px flex space-x-8">
+            <button @click="activeTab = 'general'"
+                    :class="activeTab === 'general' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                General
+            </button>
+            <button @click="activeTab = 'gamification'"
+                    :class="activeTab === 'gamification' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                Gamificación
+            </button>
+            <button @click="activeTab = 'narrative'"
+                    :class="activeTab === 'narrative' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                Narrativa
+            </button>
+            <button @click="activeTab = 'channels'"
+                    :class="activeTab === 'channels' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                Canales
+            </button>
+            <button @click="activeTab = 'history'"
+                    :class="activeTab === 'history' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                Historial
+            </button>
+        </nav>
+    </div>
+
+    <!-- General Settings Tab -->
+    <div x-show="activeTab === 'general'" class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Configuración General</h3>
+        <form @submit.prevent="saveGeneralSettings" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Nombre del Bot</label>
+                    <input x-model="generalSettings.botName" type="text" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Idioma Predeterminado</label>
+                    <select x-model="generalSettings.defaultLanguage" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="es">Español</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Zona Horaria</label>
+                    <select x-model="generalSettings.timezone" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="America/Bogota">Bogotá (UTC-5)</option>
+                        <option value="America/Mexico_City">Ciudad de México (UTC-6)</option>
+                        <option value="Europe/Madrid">Madrid (UTC+1)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Modo de Depuración</label>
+                    <div class="mt-2">
+                        <input x-model="generalSettings.debugMode" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-700">Habilitar logs detallados</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Gamification Settings Tab -->
+    <div x-show="activeTab === 'gamification'" class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Configuración de Gamificación</h3>
+        <form @submit.prevent="saveGamificationSettings" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Besitos por Mensaje</label>
+                    <input x-model="gamificationSettings.besitosPerMessage" type="number" min="0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Besitos por Trivia</label>
+                    <input x-model="gamificationSettings.besitosPerTrivia" type="number" min="0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Besitos por Misión</label>
+                    <input x-model="gamificationSettings.besitosPerMission" type="number" min="0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Límite Diario de Besitos</label>
+                    <input x-model="gamificationSettings.dailyBesitosLimit" type="number" min="0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Recompensa Diaria</label>
+                    <input x-model="gamificationSettings.dailyReward" type="number" min="0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">VIP Multiplicador</label>
+                    <input x-model="gamificationSettings.vipMultiplier" type="number" min="1" step="0.1" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Narrative Settings Tab -->
+    <div x-show="activeTab === 'narrative'" class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Configuración de Narrativa</h3>
+        <form @submit.prevent="saveNarrativeSettings" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Fragmentos por Día</label>
+                    <input x-model="narrativeSettings.fragmentsPerDay" type="number" min="1" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Tiempo entre Fragmentos (min)</label>
+                    <input x-model="narrativeSettings.timeBetweenFragments" type="number" min="0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Longitud Máxima de Fragmento</label>
+                    <input x-model="narrativeSettings.maxFragmentLength" type="number" min="100" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Auto-continuar Historia</label>
+                    <div class="mt-2">
+                        <input x-model="narrativeSettings.autoContinue" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-700">Permitir continuación automática</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Requerir Elección de Usuario</label>
+                    <div class="mt-2">
+                        <input x-model="narrativeSettings.requireUserChoice" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-700">Forzar elecciones en puntos clave</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Modo de Narración</label>
+                    <select x-model="narrativeSettings.narrationMode" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="linear">Lineal</option>
+                        <option value="branching">Ramificada</option>
+                        <option value="dynamic">Dinámica</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Channels Settings Tab -->
+    <div x-show="activeTab === 'channels'" class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Configuración de Canales</h3>
+        <form @submit.prevent="saveChannelsSettings" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Canal Principal</label>
+                    <input x-model="channelsSettings.mainChannel" type="text" placeholder="@canal_principal" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Canal de Anuncios</label>
+                    <input x-model="channelsSettings.announcementsChannel" type="text" placeholder="@anuncios" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Canal de Soporte</label>
+                    <input x-model="channelsSettings.supportChannel" type="text" placeholder="@soporte" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Auto-publicar en Canales</label>
+                    <div class="mt-2">
+                        <input x-model="channelsSettings.autoPublish" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-700">Publicar automáticamente en canales configurados</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Frecuencia de Publicación</label>
+                    <select x-model="channelsSettings.publishFrequency" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="hourly">Cada hora</option>
+                        <option value="daily">Diariamente</option>
+                        <option value="weekly">Semanalmente</option>
+                        <option value="manual">Manual</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Notificaciones Push</label>
+                    <div class="mt-2">
+                        <input x-model="channelsSettings.pushNotifications" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-700">Enviar notificaciones push</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- History Tab -->
+    <div x-show="activeTab === 'history'" class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Historial de Cambios</h3>
+        <div class="space-y-4">
+            <div class="flex justify-between items-center">
+                <div class="flex space-x-2">
+                    <input x-model="historyFilter" type="text" placeholder="Buscar cambios..." class="border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    <select x-model="historyType" class="border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="all">Todos</option>
+                        <option value="general">General</option>
+                        <option value="gamification">Gamificación</option>
+                        <option value="narrative">Narrativa</option>
+                        <option value="channels">Canales</option>
+                    </select>
+                </div>
+                <button @click="exportHistory" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    Exportar
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cambios</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <template x-for="change in filteredHistory" :key="change.id">
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="formatDate(change.timestamp)"></td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                                          :class="getTypeColor(change.type)">
+                                        <span x-text="change.type"></span>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">
+                                    <div class="max-w-xs truncate" x-text="change.description"></div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="change.user"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-gray-700">
+                    Mostrando <span x-text="currentPage * itemsPerPage + 1"></span> a <span x-text="Math.min((currentPage + 1) * itemsPerPage, totalHistory)"></span> de <span x-text="totalHistory"></span> cambios
+                </div>
+                <div class="flex space-x-2">
+                    <button @click="previousPage" :disabled="currentPage === 0" class="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                        Anterior
+                    </button>
+                    <button @click="nextPage" :disabled="(currentPage + 1) * itemsPerPage >= totalHistory" class="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                        Siguiente
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function configManager() {
+    return {
+        activeTab: 'general',
+        generalSettings: {
+            botName: 'DianaBot',
+            defaultLanguage: 'es',
+            timezone: 'America/Bogota',
+            debugMode: false
+        },
+        gamificationSettings: {
+            besitosPerMessage: 1,
+            besitosPerTrivia: 5,
+            besitosPerMission: 10,
+            dailyBesitosLimit: 100,
+            dailyReward: 10,
+            vipMultiplier: 2.0
+        },
+        narrativeSettings: {
+            fragmentsPerDay: 3,
+            timeBetweenFragments: 30,
+            maxFragmentLength: 1000,
+            autoContinue: true,
+            requireUserChoice: false,
+            narrationMode: 'branching'
+        },
+        channelsSettings: {
+            mainChannel: '',
+            announcementsChannel: '',
+            supportChannel: '',
+            autoPublish: false,
+            publishFrequency: 'daily',
+            pushNotifications: true
+        },
+        historyFilter: '',
+        historyType: 'all',
+        history: [],
+        filteredHistory: [],
+        currentPage: 0,
+        itemsPerPage: 10,
+        totalHistory: 0,
+
+        init() {
+            this.loadSettings();
+            this.loadHistory();
+        },
+
+        loadSettings() {
+            // Load settings from API
+            fetch('/api/config')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.general) this.generalSettings = { ...this.generalSettings, ...data.general };
+                    if (data.gamification) this.gamificationSettings = { ...this.gamificationSettings, ...data.gamification };
+                    if (data.narrative) this.narrativeSettings = { ...this.narrativeSettings, ...data.narrative };
+                    if (data.channels) this.channelsSettings = { ...this.channelsSettings, ...data.channels };
+                })
+                .catch(error => console.error('Error loading settings:', error));
+        },
+
+        saveGeneralSettings() {
+            this.saveSettings('general', this.generalSettings);
+        },
+
+        saveGamificationSettings() {
+            this.saveSettings('gamification', this.gamificationSettings);
+        },
+
+        saveNarrativeSettings() {
+            this.saveSettings('narrative', this.narrativeSettings);
+        },
+
+        saveChannelsSettings() {
+            this.saveSettings('channels', this.channelsSettings);
+        },
+
+        saveSettings(type, settings) {
+            fetch('/api/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ type, settings })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Configuración guardada exitosamente');
+                    this.loadHistory(); // Refresh history
+                } else {
+                    alert('Error al guardar la configuración');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving settings:', error);
+                alert('Error al guardar la configuración');
+            });
+        },
+
+        loadHistory() {
+            fetch('/api/config/history')
+                .then(response => response.json())
+                .then(data => {
+                    this.history = data.history || [];
+                    this.filterHistory();
+                    this.totalHistory = this.history.length;
+                })
+                .catch(error => console.error('Error loading history:', error));
+        },
+
+        filterHistory() {
+            this.filteredHistory = this.history.filter(change => {
+                const matchesFilter = this.historyFilter === '' ||
+                    change.description.toLowerCase().includes(this.historyFilter.toLowerCase());
+                const matchesType = this.historyType === 'all' || change.type === this.historyType;
+                return matchesFilter && matchesType;
+            });
+        },
+
+        formatDate(timestamp) {
+            return new Date(timestamp).toLocaleString('es-ES');
+        },
+
+        getTypeColor(type) {
+            const colors = {
+                general: 'bg-blue-100 text-blue-800',
+                gamification: 'bg-green-100 text-green-800',
+                narrative: 'bg-purple-100 text-purple-800',
+                channels: 'bg-yellow-100 text-yellow-800'
+            };
+            return colors[type] || 'bg-gray-100 text-gray-800';
+        },
+
+        previousPage() {
+            if (this.currentPage > 0) {
+                this.currentPage--;
+            }
+        },
+
+        nextPage() {
+            if ((this.currentPage + 1) * this.itemsPerPage < this.totalHistory) {
+                this.currentPage++;
+            }
+        },
+
+        exportHistory() {
+            const dataStr = JSON.stringify(this.filteredHistory, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = 'config_history.json';
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+    }
+}
+</script>
+{% endblock %}
