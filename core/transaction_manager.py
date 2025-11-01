@@ -9,6 +9,7 @@ de rollback en caso de fallo.
 import logging
 from typing import Any, Callable, Dict, List, Optional
 from datetime import datetime
+from modules.gamification.reactions import reaction_processor
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +124,9 @@ class DistributedTransaction:
             'gamification.grant_besitos': self._gamification_grant_besitos,
             'gamification.add_to_inventory': self._gamification_add_to_inventory,
             'gamification.progress_mission': self._gamification_progress_mission,
+            'gamification.register_reaction': self._gamification_register_reaction,
+            'gamification.check_reaction_achievements': self._gamification_check_reaction_achievements,
+            'gamification.update_reaction_missions': self._gamification_update_reaction_missions,
             
             # Operaciones de experiencias
             'experience.progress_component': self._experience_progress_component,
@@ -221,6 +225,39 @@ class DistributedTransaction:
         # TODO: Integrar con módulo de gamificación existente
         logger.info(f"Actualizando progreso de misión {mission_id} para usuario {user_id}")
         return {'success': True, 'mission_progress': progress_data}
+    
+    def _gamification_register_reaction(self, user_id: int, content_type: str, content_id: int, reaction: str) -> Dict[str, Any]:
+        """Registra reacción usando el módulo de gamificación"""
+        try:
+            result = reaction_processor.process_reaction(
+                user_id=user_id,
+                content_type=content_type,
+                content_id=content_id,
+                reaction_type=reaction
+            )
+            
+            logger.info(f"Reacción registrada: {reaction} en {content_type} {content_id} por usuario {user_id}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error registrando reacción: {e}")
+            return {
+                'success': False,
+                'reason': 'processing_error',
+                'message': 'Error al procesar reacción'
+            }
+    
+    def _gamification_check_reaction_achievements(self, user_id: int) -> List[Dict[str, Any]]:
+        """Verifica si reacción desbloquea logros"""
+        # TODO: Integrar con módulo de logros
+        logger.info(f"Verificando logros por reacción para usuario {user_id}")
+        return []
+    
+    def _gamification_update_reaction_missions(self, user_id: int, reaction: str) -> List[Dict[str, Any]]:
+        """Actualiza progreso de misiones relacionadas con reacciones"""
+        # TODO: Integrar con módulo de misiones
+        logger.info(f"Actualizando misiones por reacción {reaction} para usuario {user_id}")
+        return []
     
     def _experience_progress_component(self, user_id: int, experience_id: int, 
                                      component_type: str, component_id: int) -> Dict[str, Any]:
