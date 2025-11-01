@@ -1067,15 +1067,15 @@ class ShopItem(Base):
             "type": self.type,
             "category": self.category,
             "price_besitos": self.price_besitos,
-            "price_real": float(self.price_real) if self.price_real else None,
+            "price_real": float(self.price_real) if self.price_real is not None else None,
             "currency": self.currency,
             "is_available": self.is_available,
             "stock": self.stock,
             "is_limited_time": self.is_limited_time,
-            "available_from": self.available_from.isoformat() if self.available_from else None,
-            "available_until": self.available_until.isoformat() if self.available_until else None,
+            "available_from": self.available_from.isoformat() if self.available_from is not None else None,
+            "available_until": self.available_until.isoformat() if self.available_until is not None else None,
             "discount_percentage": self.discount_percentage,
-            "discount_expires_at": self.discount_expires_at.isoformat() if self.discount_expires_at else None,
+            "discount_expires_at": self.discount_expires_at.isoformat() if self.discount_expires_at is not None else None,
             "rarity": self.rarity,
             "image_url": self.image_url,
             "tags": self.tags,
@@ -1085,9 +1085,9 @@ class ShopItem(Base):
             "purchase_requirements": self.purchase_requirements,
             "view_count": self.view_count,
             "purchase_count": self.purchase_count,
-            "conversion_rate": float(self.conversion_rate) if self.conversion_rate else 0.0,
-            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None,
-            "updated_at": self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else None
+            "conversion_rate": float(self.conversion_rate) if self.conversion_rate is not None else 0.0,
+            "created_at": self.created_at.isoformat() if self.created_at is not None else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at is not None else None
         }
 
 
@@ -1141,15 +1141,15 @@ class UserPurchase(Base):
             "user_id": self.user_id,
             "shop_item_id": self.shop_item_id,
             "purchase_type": self.purchase_type,
-            "amount_paid": float(self.amount_paid) if self.amount_paid else None,
+            "amount_paid": float(self.amount_paid) if self.amount_paid is not None else None,
             "currency": self.currency,
             "besitos_spent": self.besitos_spent,
             "status": self.status,
             "telegram_payment_charge_id": self.telegram_payment_charge_id,
             "provider_payment_charge_id": self.provider_payment_charge_id,
             "unlocks_applied": self.unlocks_applied,
-            "unlocks_applied_at": self.unlocks_applied_at.isoformat() if self.unlocks_applied_at else None,
-            "purchase_date": self.purchase_date.isoformat() if hasattr(self.purchase_date, 'isoformat') else None,
+            "unlocks_applied_at": self.unlocks_applied_at.isoformat() if self.unlocks_applied_at is not None else None,
+            "purchase_date": self.purchase_date.isoformat() if self.purchase_date is not None else None,
             "purchase_context": self.purchase_context
         }
 
@@ -1199,11 +1199,11 @@ class UserArchetype(Base):
             "user_id": self.user_id,
             "primary_archetype": self.primary_archetype,
             "secondary_archetype": self.secondary_archetype,
-            "confidence_score": float(self.confidence_score) if self.confidence_score else 0.0,
+            "confidence_score": float(self.confidence_score) if self.confidence_score is not None else 0.0,
             "archetype_scores": self.archetype_scores,
             "behavior_patterns": self.behavior_patterns,
-            "last_updated": self.last_updated.isoformat() if hasattr(self.last_updated, 'isoformat') else None,
-            "last_analyzed": self.last_analyzed.isoformat() if hasattr(self.last_analyzed, 'isoformat') else None
+            "last_updated": self.last_updated.isoformat() if self.last_updated is not None else None,
+            "last_analyzed": self.last_analyzed.isoformat() if self.last_analyzed is not None else None
         }
 
 
@@ -1250,15 +1250,15 @@ class VIPSubscription(Base):
             "id": self.id,
             "user_id": self.user_id,
             "subscription_type": self.subscription_type,
-            "start_date": self.start_date.isoformat() if hasattr(self.start_date, 'isoformat') else None,
-            "end_date": self.end_date.isoformat() if self.end_date else None,
+            "start_date": self.start_date.isoformat() if self.start_date is not None else None,
+            "end_date": self.end_date.isoformat() if self.end_date is not None else None,
             "is_active": self.is_active,
             "auto_renew": self.auto_renew,
             "payment_method": self.payment_method,
-            "amount_paid": float(self.amount_paid) if self.amount_paid else None,
+            "amount_paid": float(self.amount_paid) if self.amount_paid is not None else None,
             "currency": self.currency,
             "telegram_payment_charge_id": self.telegram_payment_charge_id,
-            "cancelled_at": self.cancelled_at.isoformat() if self.cancelled_at else None,
+            "cancelled_at": self.cancelled_at.isoformat() if self.cancelled_at is not None else None,
             "cancellation_reason": self.cancellation_reason,
             "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None,
             "updated_at": self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else None
@@ -1315,7 +1315,295 @@ class PersonalizedOffer(Base):
             "expires_at": self.expires_at.isoformat() if hasattr(self.expires_at, 'isoformat') else None,
             "is_active": self.is_active,
             "viewed": self.viewed,
-            "viewed_at": self.viewed_at.isoformat() if self.viewed_at else None,
+            "viewed_at": self.viewed_at.isoformat() if self.viewed_at is not None else None,
             "accepted": self.accepted,
-            "accepted_at": self.accepted_at.isoformat() if self.accepted_at else None
+            "accepted_at": self.accepted_at.isoformat() if self.accepted_at is not None else None
+        }
+
+
+class Experience(Base):
+    """Experience model for unified experiences system"""
+    __tablename__ = "experiences"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    experience_key = Column(String(100), unique=True, nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    experience_type = Column(String(50), nullable=False)  # 'narrative_chain', 'mission_chain', 'event_chain', 'mixed'
+    
+    # Configuración
+    is_active = Column(Boolean, default=True)
+    is_visible = Column(Boolean, default=True)
+    difficulty_level = Column(String(50), default='normal')  # 'easy', 'normal', 'hard', 'expert'
+    estimated_duration = Column(Integer, nullable=True)  # en minutos
+    
+    # Métricas
+    start_count = Column(Integer, default=0)
+    completion_count = Column(Integer, default=0)
+    average_completion_time = Column(Float, default=0.0)  # en minutos
+    success_rate = Column(Float, default=0.0)  # porcentaje
+    
+    # Metadata
+    tags = Column(ARRAY(String), nullable=True)
+    experience_metadata = Column(JSON, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    components = relationship("ExperienceComponent", back_populates="experience", cascade="all, delete-orphan")
+    requirements = relationship("ExperienceRequirement", back_populates="experience", cascade="all, delete-orphan")
+    rewards = relationship("ExperienceReward", back_populates="experience", cascade="all, delete-orphan")
+    user_progress = relationship("UserExperienceProgress", back_populates="experience", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<Experience(experience_key={self.experience_key}, name={self.name}, type={self.experience_type})>"
+
+    def to_dict(self):
+        """Convert experience to dictionary"""
+        return {
+            "id": self.id,
+            "experience_key": self.experience_key,
+            "name": self.name,
+            "description": self.description,
+            "experience_type": self.experience_type,
+            "is_active": self.is_active,
+            "is_visible": self.is_visible,
+            "difficulty_level": self.difficulty_level,
+            "estimated_duration": self.estimated_duration,
+            "start_count": self.start_count,
+            "completion_count": self.completion_count,
+            "average_completion_time": self.average_completion_time,
+            "success_rate": self.success_rate,
+            "tags": self.tags,
+            "metadata": self.experience_metadata,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None,
+            "updated_at": self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else None
+        }
+
+
+class ExperienceComponent(Base):
+    """Experience component model for individual steps in experiences"""
+    __tablename__ = "experience_components"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    experience_id = Column(Integer, ForeignKey("experiences.id"), nullable=False, index=True)
+    component_key = Column(String(100), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    
+    # Configuración
+    component_type = Column(String(50), nullable=False)  # 'narrative', 'mission', 'trivia', 'reaction', 'purchase', 'custom'
+    sequence_order = Column(Integer, nullable=False)
+    is_optional = Column(Boolean, default=False)
+    
+    # Requisitos específicos del componente
+    component_requirements = Column(JSON, nullable=True)
+    
+    # Recompensas específicas del componente
+    completion_rewards = Column(JSON, nullable=True)
+    
+    # Metadata
+    component_metadata = Column(JSON, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    experience = relationship("Experience", back_populates="components")
+    user_completions = relationship("UserComponentCompletion", back_populates="component", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<ExperienceComponent(component_key={self.component_key}, name={self.name}, type={self.component_type})>"
+
+    def to_dict(self):
+        """Convert experience component to dictionary"""
+        return {
+            "id": self.id,
+            "experience_id": self.experience_id,
+            "component_key": self.component_key,
+            "name": self.name,
+            "description": self.description,
+            "component_type": self.component_type,
+            "sequence_order": self.sequence_order,
+            "is_optional": self.is_optional,
+            "component_requirements": self.component_requirements,
+            "completion_rewards": self.completion_rewards,
+            "metadata": self.component_metadata,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
+
+
+class UserExperienceProgress(Base):
+    """User experience progress tracking"""
+    __tablename__ = "user_experience_progress"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    experience_id = Column(Integer, ForeignKey("experiences.id"), nullable=False, index=True)
+    
+    # Estado del progreso
+    status = Column(String(50), nullable=False)  # 'not_started', 'in_progress', 'completed', 'abandoned'
+    current_component_id = Column(Integer, ForeignKey("experience_components.id"), nullable=True)
+    
+    # Métricas de progreso
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    last_activity_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Progreso numérico
+    completion_percentage = Column(Float, default=0.0)
+    components_completed = Column(Integer, default=0)
+    components_total = Column(Integer, default=0)
+    
+    # Metadata
+    progress_metadata = Column(JSON, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    user = relationship("User")
+    experience = relationship("Experience", back_populates="user_progress")
+    current_component = relationship("ExperienceComponent", foreign_keys=[current_component_id])
+    component_completions = relationship("UserComponentCompletion", back_populates="user_progress", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<UserExperienceProgress(user_id={self.user_id}, experience_id={self.experience_id}, status={self.status})>"
+
+    def to_dict(self):
+        """Convert user experience progress to dictionary"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "experience_id": self.experience_id,
+            "status": self.status,
+            "current_component_id": self.current_component_id,
+            "started_at": self.started_at.isoformat() if self.started_at is not None else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at is not None else None,
+            "last_activity_at": self.last_activity_at.isoformat() if self.last_activity_at is not None else None,
+            "completion_percentage": self.completion_percentage,
+            "components_completed": self.components_completed,
+            "components_total": self.components_total,
+            "metadata": self.progress_metadata,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None,
+            "updated_at": self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else None
+        }
+
+
+class UserComponentCompletion(Base):
+    """User component completion tracking"""
+    __tablename__ = "user_component_completions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_progress_id = Column(Integer, ForeignKey("user_experience_progress.id"), nullable=False, index=True)
+    component_id = Column(Integer, ForeignKey("experience_components.id"), nullable=False, index=True)
+    
+    # Datos de completitud
+    completed_at = Column(DateTime(timezone=True), server_default=func.now())
+    completion_data = Column(JSON, nullable=True)  # datos específicos de completitud
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user_progress = relationship("UserExperienceProgress", back_populates="component_completions")
+    component = relationship("ExperienceComponent", back_populates="user_completions")
+
+    def __repr__(self):
+        return f"<UserComponentCompletion(user_progress_id={self.user_progress_id}, component_id={self.component_id})>"
+
+    def to_dict(self):
+        """Convert user component completion to dictionary"""
+        return {
+            "id": self.id,
+            "user_progress_id": self.user_progress_id,
+            "component_id": self.component_id,
+            "completed_at": self.completed_at.isoformat() if hasattr(self.completed_at, 'isoformat') else None,
+            "completion_data": self.completion_data,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
+
+
+class ExperienceRequirement(Base):
+    """Experience requirement model for composite requirements"""
+    __tablename__ = "experience_requirements"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    experience_id = Column(Integer, ForeignKey("experiences.id"), nullable=False, index=True)
+    
+    # Tipo de requisito
+    requirement_type = Column(String(50), nullable=False)  # 'level', 'vip_membership', 'item', 'achievement', 'experience_completed', 'besitos'
+    requirement_value = Column(JSON, nullable=False)  # valor específico del requisito
+    
+    # Configuración
+    is_mandatory = Column(Boolean, default=True)
+    requirement_order = Column(Integer, default=0)
+    
+    # Metadata
+    requirement_metadata = Column(JSON, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    experience = relationship("Experience", back_populates="requirements")
+
+    def __repr__(self):
+        return f"<ExperienceRequirement(experience_id={self.experience_id}, type={self.requirement_type})>"
+
+    def to_dict(self):
+        """Convert experience requirement to dictionary"""
+        return {
+            "id": self.id,
+            "experience_id": self.experience_id,
+            "requirement_type": self.requirement_type,
+            "requirement_value": self.requirement_value,
+            "is_mandatory": self.is_mandatory,
+            "requirement_order": self.requirement_order,
+            "metadata": self.requirement_metadata,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
+
+
+class ExperienceReward(Base):
+    """Experience reward model for composite rewards"""
+    __tablename__ = "experience_rewards"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    experience_id = Column(Integer, ForeignKey("experiences.id"), nullable=False, index=True)
+    
+    # Tipo de recompensa
+    reward_type = Column(String(50), nullable=False)  # 'besitos', 'item', 'achievement', 'vip_days', 'narrative_unlock', 'experience_unlock'
+    reward_value = Column(JSON, nullable=False)  # valor específico de la recompensa
+    
+    # Configuración
+    reward_order = Column(Integer, default=0)
+    is_guaranteed = Column(Boolean, default=True)
+    
+    # Metadata
+    reward_metadata = Column(JSON, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    experience = relationship("Experience", back_populates="rewards")
+
+    def __repr__(self):
+        return f"<ExperienceReward(experience_id={self.experience_id}, type={self.reward_type})>"
+
+    def to_dict(self):
+        """Convert experience reward to dictionary"""
+        return {
+            "id": self.id,
+            "experience_id": self.experience_id,
+            "reward_type": self.reward_type,
+            "reward_value": self.reward_value,
+            "reward_order": self.reward_order,
+            "is_guaranteed": self.is_guaranteed,
+            "metadata": self.reward_metadata,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
         }
