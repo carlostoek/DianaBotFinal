@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, BigInteger, String, DateTime, Boolean, Text, JSON, ForeignKey
+from sqlalchemy import Column, Integer, BigInteger, String, DateTime, Boolean, Text, JSON, ForeignKey, UniqueConstraint, Index, Date, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database.connection import Base
@@ -413,6 +413,81 @@ class Channel(Base):
         }
 
 
+class ContentReaction(Base):
+    """Content reaction model for tracking user reactions to various content types"""
+    __tablename__ = "content_reactions"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    content_type = Column(String(50), nullable=False)  # narrative_fragment, channel_post, mission
+    content_id = Column(Integer, nullable=False)
+    reaction_type = Column(String(50), nullable=False)  # like, love, fire, star, custom
+    
+    # Recompensa
+    besitos_earned = Column(Integer, default=0)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relaciones
+    user = relationship("User")
+    
+    __table_args__ = (
+        UniqueConstraint('user_id', 'content_type', 'content_id', 'reaction_type', 
+                        name='unique_user_content_reaction'),
+        Index('idx_content_reactions', 'content_type', 'content_id'),
+    )
+
+    def __repr__(self):
+        return f"<ContentReaction(user_id={self.user_id}, content_type={self.content_type}, reaction_type={self.reaction_type})>"
+
+    def to_dict(self):
+        """Convert content reaction to dictionary"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "content_type": self.content_type,
+            "content_id": self.content_id,
+            "reaction_type": self.reaction_type,
+            "besitos_earned": self.besitos_earned,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
+
+
+class ReactionRewardConfig(Base):
+    """Reaction reward configuration model"""
+    __tablename__ = "reaction_reward_configs"
+    
+    id = Column(Integer, primary_key=True)
+    content_type = Column(String(50), nullable=False)
+    reaction_type = Column(String(50), nullable=False)
+    besitos_reward = Column(Integer, default=0)
+    
+    # Límites
+    max_per_user_per_content = Column(Integer, default=1)
+    max_per_user_per_day = Column(Integer, nullable=True)
+    
+    is_active = Column(Boolean, default=True)
+    
+    __table_args__ = (
+        UniqueConstraint('content_type', 'reaction_type', name='unique_content_reaction_config'),
+    )
+
+    def __repr__(self):
+        return f"<ReactionRewardConfig(content_type={self.content_type}, reaction_type={self.reaction_type}, reward={self.besitos_reward})>"
+
+    def to_dict(self):
+        """Convert reaction reward config to dictionary"""
+        return {
+            "id": self.id,
+            "content_type": self.content_type,
+            "reaction_type": self.reaction_type,
+            "besitos_reward": self.besitos_reward,
+            "max_per_user_per_content": self.max_per_user_per_content,
+            "max_per_user_per_day": self.max_per_user_per_day,
+            "is_active": self.is_active
+        }
+
+
 class UserReaction(Base):
     """User reaction tracking for gamified reactions"""
     __tablename__ = "user_reactions"
@@ -753,4 +828,162 @@ class UserSecretDiscovery(Base):
             "secret_code_id": self.secret_code_id,
             "fragment_key": self.fragment_key,
             "discovered_at": self.discovered_at.isoformat() if hasattr(self.discovered_at, 'isoformat') else None
+        }
+
+
+class AnalyticsEvent(Base):
+    """Analytics event model for tracking user interactions and system events"""
+    __tablename__ = "analytics_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_type = Column(String(100), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    session_id = Column(String(100), nullable=True, index=True)
+    timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+    metadata = Column(JSON, nullable=True)  # Additional event-specific data
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User")
+
+    __table_args__ = (
+        Index('idx_analytics_user_timestamp', 'user_id', 'timestamp'),
+        Index('idx_analytics_type_timestamp', 'event_type', 'timestamp'),
+    )
+
+    def __repr__(self):
+        return f"<AnalyticsEvent(event_type={self.event_type}, user_id={self.user_id}, timestamp={self.timestamp})>"
+
+    def to_dict(self):
+        """Convert analytics event to dictionary"""
+        return {
+            "id": self.id,
+            "event_type": self.event_type,
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "timestamp": self.timestamp.isoformat() if hasattr(self.timestamp, 'isoformat') else None,
+            "metadata": self.metadata,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
+
+
+class DailyMetrics(Base):
+    """Daily aggregated metrics for analytics"""
+    __tablename__ = "daily_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, nullable=False, index=True)
+    
+    # User metrics
+    total_users = Column(Integer, default=0)
+    active_users = Column(Integer, default=0)
+    new_users = Column(Integer, default=0)
+    
+    # Engagement metrics
+    total_messages = Column(Integer, default=0)
+    total_reactions = Column(Integer, default=0)
+    total_missions_completed = Column(Integer, default=0)
+    total_achievements_unlocked = Column(Integer, default=0)
+    
+    # Economic metrics
+    total_besitos_earned = Column(Integer, default=0)
+    total_besitos_spent = Column(Integer, default=0)
+    
+    # Content metrics
+    total_content_views = Column(Integer, default=0)
+    total_trivia_answered = Column(Integer, default=0)
+    total_auction_participations = Column(Integer, default=0)
+    
+    # Retention metrics
+    retention_rate = Column(Float, default=0.0)  # Percentage of returning users
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint('date', name='unique_daily_metrics_date'),
+    )
+
+    def __repr__(self):
+        return f"<DailyMetrics(date={self.date}, active_users={self.active_users}, total_messages={self.total_messages})>"
+
+    def to_dict(self):
+        """Convert daily metrics to dictionary"""
+        return {
+            "id": self.id,
+            "date": self.date.isoformat() if hasattr(self.date, 'isoformat') else None,
+            "total_users": self.total_users,
+            "active_users": self.active_users,
+            "new_users": self.new_users,
+            "total_messages": self.total_messages,
+            "total_reactions": self.total_reactions,
+            "total_missions_completed": self.total_missions_completed,
+            "total_achievements_unlocked": self.total_achievements_unlocked,
+            "total_besitos_earned": self.total_besitos_earned,
+            "total_besitos_spent": self.total_besitos_spent,
+            "total_content_views": self.total_content_views,
+            "total_trivia_answered": self.total_trivia_answered,
+            "total_auction_participations": self.total_auction_participations,
+            "retention_rate": self.retention_rate,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None,
+            "updated_at": self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else None
+        }
+
+
+class UserSessionMetrics(Base):
+    """User session metrics for detailed user behavior analysis"""
+    __tablename__ = "user_session_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    session_id = Column(String(100), nullable=False, index=True)
+    start_time = Column(DateTime(timezone=True), nullable=False)
+    end_time = Column(DateTime(timezone=True), nullable=True)
+    
+    # Session metrics
+    session_duration = Column(Integer, default=0)  # in seconds
+    messages_sent = Column(Integer, default=0)
+    reactions_added = Column(Integer, default=0)
+    missions_completed = Column(Integer, default=0)
+    achievements_unlocked = Column(Integer, default=0)
+    besitos_earned = Column(Integer, default=0)
+    content_views = Column(Integer, default=0)
+    trivia_answered = Column(Integer, default=0)
+    
+    # Platform info
+    platform = Column(String(50), default='telegram')
+    device_info = Column(JSON, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User")
+
+    __table_args__ = (
+        Index('idx_session_user_start', 'user_id', 'start_time'),
+        Index('idx_session_duration', 'session_duration'),
+    )
+
+    def __repr__(self):
+        return f"<UserSessionMetrics(user_id={self.user_id}, session_id={self.session_id}, duration={self.session_duration})>"
+
+    def to_dict(self):
+        """Convert user session metrics to dictionary"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "start_time": self.start_time.isoformat() if hasattr(self.start_time, 'isoformat') else None,
+            "end_time": self.end_time.isoformat() if hasattr(self.end_time, 'isoformat') else None,
+            "session_duration": self.session_duration,
+            "messages_sent": self.messages_sent,
+            "reactions_added": self.reactions_added,
+            "missions_completed": self.missions_completed,
+            "achievements_unlocked": self.achievements_unlocked,
+            "besitos_earned": self.besitos_earned,
+            "content_views": self.content_views,
+            "trivia_answered": self.trivia_answered,
+            "platform": self.platform,
+            "device_info": self.device_info,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
         }
