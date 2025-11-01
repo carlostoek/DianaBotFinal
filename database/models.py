@@ -1,7 +1,8 @@
-from sqlalchemy import Column, Integer, BigInteger, String, DateTime, Boolean, Text, JSON, ForeignKey
+from sqlalchemy import Column, Integer, BigInteger, String, DateTime, Boolean, Text, JSON, ForeignKey, UniqueConstraint, Index, Date, Float, Numeric, ARRAY
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database.connection import Base
+from datetime import datetime
 
 
 class User(Base):
@@ -34,6 +35,8 @@ class User(Base):
 
     # Relationships
     bids = relationship("Bid", back_populates="user")
+    purchases = relationship("UserPurchase", back_populates="user")
+    archetype_data = relationship("UserArchetype", back_populates="user", uselist=False)
 
     def __repr__(self):
         return f"<User(telegram_id={self.telegram_id}, username={self.username})>"
@@ -413,6 +416,81 @@ class Channel(Base):
         }
 
 
+class ContentReaction(Base):
+    """Content reaction model for tracking user reactions to various content types"""
+    __tablename__ = "content_reactions"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    content_type = Column(String(50), nullable=False)  # narrative_fragment, channel_post, mission
+    content_id = Column(Integer, nullable=False)
+    reaction_type = Column(String(50), nullable=False)  # like, love, fire, star, custom
+    
+    # Recompensa
+    besitos_earned = Column(Integer, default=0)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relaciones
+    user = relationship("User")
+    
+    __table_args__ = (
+        UniqueConstraint('user_id', 'content_type', 'content_id', 'reaction_type', 
+                        name='unique_user_content_reaction'),
+        Index('idx_content_reactions', 'content_type', 'content_id'),
+    )
+
+    def __repr__(self):
+        return f"<ContentReaction(user_id={self.user_id}, content_type={self.content_type}, reaction_type={self.reaction_type})>"
+
+    def to_dict(self):
+        """Convert content reaction to dictionary"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "content_type": self.content_type,
+            "content_id": self.content_id,
+            "reaction_type": self.reaction_type,
+            "besitos_earned": self.besitos_earned,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
+
+
+class ReactionRewardConfig(Base):
+    """Reaction reward configuration model"""
+    __tablename__ = "reaction_reward_configs"
+    
+    id = Column(Integer, primary_key=True)
+    content_type = Column(String(50), nullable=False)
+    reaction_type = Column(String(50), nullable=False)
+    besitos_reward = Column(Integer, default=0)
+    
+    # Límites
+    max_per_user_per_content = Column(Integer, default=1)
+    max_per_user_per_day = Column(Integer, nullable=True)
+    
+    is_active = Column(Boolean, default=True)
+    
+    __table_args__ = (
+        UniqueConstraint('content_type', 'reaction_type', name='unique_content_reaction_config'),
+    )
+
+    def __repr__(self):
+        return f"<ReactionRewardConfig(content_type={self.content_type}, reaction_type={self.reaction_type}, reward={self.besitos_reward})>"
+
+    def to_dict(self):
+        """Convert reaction reward config to dictionary"""
+        return {
+            "id": self.id,
+            "content_type": self.content_type,
+            "reaction_type": self.reaction_type,
+            "besitos_reward": self.besitos_reward,
+            "max_per_user_per_content": self.max_per_user_per_content,
+            "max_per_user_per_day": self.max_per_user_per_day,
+            "is_active": self.is_active
+        }
+
+
 class UserReaction(Base):
     """User reaction tracking for gamified reactions"""
     __tablename__ = "user_reactions"
@@ -753,4 +831,491 @@ class UserSecretDiscovery(Base):
             "secret_code_id": self.secret_code_id,
             "fragment_key": self.fragment_key,
             "discovered_at": self.discovered_at.isoformat() if hasattr(self.discovered_at, 'isoformat') else None
+        }
+
+
+class AnalyticsEvent(Base):
+    """Analytics event model for tracking user interactions and system events"""
+    __tablename__ = "analytics_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_type = Column(String(100), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    session_id = Column(String(100), nullable=True, index=True)
+    timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+    event_metadata = Column(JSON, nullable=True)  # Additional event-specific data
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User")
+
+    __table_args__ = (
+        Index('idx_analytics_user_timestamp', 'user_id', 'timestamp'),
+        Index('idx_analytics_type_timestamp', 'event_type', 'timestamp'),
+    )
+
+    def __repr__(self):
+        return f"<AnalyticsEvent(event_type={self.event_type}, user_id={self.user_id}, timestamp={self.timestamp})>"
+
+    def to_dict(self):
+        """Convert analytics event to dictionary"""
+        return {
+            "id": self.id,
+            "event_type": self.event_type,
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "timestamp": self.timestamp.isoformat() if hasattr(self.timestamp, 'isoformat') else None,
+            "metadata": self.metadata,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
+
+
+class DailyMetrics(Base):
+    """Daily aggregated metrics for analytics"""
+    __tablename__ = "daily_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, nullable=False, index=True)
+    
+    # User metrics
+    total_users = Column(Integer, default=0)
+    active_users = Column(Integer, default=0)
+    new_users = Column(Integer, default=0)
+    
+    # Engagement metrics
+    total_messages = Column(Integer, default=0)
+    total_reactions = Column(Integer, default=0)
+    total_missions_completed = Column(Integer, default=0)
+    total_achievements_unlocked = Column(Integer, default=0)
+    
+    # Economic metrics
+    total_besitos_earned = Column(Integer, default=0)
+    total_besitos_spent = Column(Integer, default=0)
+    
+    # Content metrics
+    total_content_views = Column(Integer, default=0)
+    total_trivia_answered = Column(Integer, default=0)
+    total_auction_participations = Column(Integer, default=0)
+    
+    # Retention metrics
+    retention_rate = Column(Float, default=0.0)  # Percentage of returning users
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint('date', name='unique_daily_metrics_date'),
+    )
+
+    def __repr__(self):
+        return f"<DailyMetrics(date={self.date}, active_users={self.active_users}, total_messages={self.total_messages})>"
+
+    def to_dict(self):
+        """Convert daily metrics to dictionary"""
+        return {
+            "id": self.id,
+            "date": self.date.isoformat() if hasattr(self.date, 'isoformat') else None,
+            "total_users": self.total_users,
+            "active_users": self.active_users,
+            "new_users": self.new_users,
+            "total_messages": self.total_messages,
+            "total_reactions": self.total_reactions,
+            "total_missions_completed": self.total_missions_completed,
+            "total_achievements_unlocked": self.total_achievements_unlocked,
+            "total_besitos_earned": self.total_besitos_earned,
+            "total_besitos_spent": self.total_besitos_spent,
+            "total_content_views": self.total_content_views,
+            "total_trivia_answered": self.total_trivia_answered,
+            "total_auction_participations": self.total_auction_participations,
+            "retention_rate": self.retention_rate,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None,
+            "updated_at": self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else None
+        }
+
+
+class UserSessionMetrics(Base):
+    """User session metrics for detailed user behavior analysis"""
+    __tablename__ = "user_session_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    session_id = Column(String(100), nullable=False, index=True)
+    start_time = Column(DateTime(timezone=True), nullable=False)
+    end_time = Column(DateTime(timezone=True), nullable=True)
+    
+    # Session metrics
+    session_duration = Column(Integer, default=0)  # in seconds
+    messages_sent = Column(Integer, default=0)
+    reactions_added = Column(Integer, default=0)
+    missions_completed = Column(Integer, default=0)
+    achievements_unlocked = Column(Integer, default=0)
+    besitos_earned = Column(Integer, default=0)
+    content_views = Column(Integer, default=0)
+    trivia_answered = Column(Integer, default=0)
+    
+    # Platform info
+    platform = Column(String(50), default='telegram')
+    device_info = Column(JSON, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User")
+
+    __table_args__ = (
+        Index('idx_session_user_start', 'user_id', 'start_time'),
+        Index('idx_session_duration', 'session_duration'),
+    )
+
+    def __repr__(self):
+        return f"<UserSessionMetrics(user_id={self.user_id}, session_id={self.session_id}, duration={self.session_duration})>"
+
+    def to_dict(self):
+        """Convert user session metrics to dictionary"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "start_time": self.start_time.isoformat() if hasattr(self.start_time, 'isoformat') else None,
+            "end_time": self.end_time.isoformat() if hasattr(self.end_time, 'isoformat') else None,
+            "session_duration": self.session_duration,
+            "messages_sent": self.messages_sent,
+            "reactions_added": self.reactions_added,
+            "missions_completed": self.missions_completed,
+            "achievements_unlocked": self.achievements_unlocked,
+            "besitos_earned": self.besitos_earned,
+            "content_views": self.content_views,
+            "trivia_answered": self.trivia_answered,
+            "platform": self.platform,
+            "device_info": self.device_info,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None
+        }
+
+
+class ShopItem(Base):
+    """Shop item model for commerce system"""
+    __tablename__ = "shop_items"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    type = Column(String(50))  # narrative_unlock, experience_unlock, vip_preview, power_up, cosmetic
+    category = Column(String(50))  # content, subscription, boost, collectible
+    
+    # Pricing
+    price_besitos = Column(Integer, nullable=True)
+    price_real = Column(Numeric(10, 2), nullable=True)  # Precio en moneda real
+    currency = Column(String(3), default='USD')
+    
+    # Disponibilidad
+    is_available = Column(Boolean, default=True)
+    stock = Column(Integer, nullable=True)  # NULL = stock ilimitado
+    is_limited_time = Column(Boolean, default=False)
+    available_from = Column(DateTime, nullable=True)
+    available_until = Column(DateTime, nullable=True)
+    
+    # Descuentos
+    discount_percentage = Column(Integer, default=0)
+    discount_expires_at = Column(DateTime, nullable=True)
+    
+    # Metadata
+    rarity = Column(String(50))  # common, rare, epic, legendary
+    image_url = Column(String(500), nullable=True)
+    tags = Column(ARRAY(String), nullable=True)
+    
+    # Desbloqueos
+    unlocks_content_type = Column(String(50), nullable=True)  # narrative, experience, mission, channel
+    unlocks_content_id = Column(Integer, nullable=True)
+    unlocks_data = Column(JSON, nullable=True)
+    # Ejemplo:
+    # {
+    #     "narrative_fragments": [10, 11, 12],
+    #     "experiences": [3],
+    #     "vip_days": 30
+    # }
+    
+    # Requisitos para comprar
+    purchase_requirements = Column(JSON, nullable=True)
+    # Ejemplo:
+    # {
+    #     "min_level": 10,
+    #     "vip_required": false,
+    #     "required_items": [1, 2]
+    # }
+    
+    # Métricas
+    view_count = Column(Integer, default=0)
+    purchase_count = Column(Integer, default=0)
+    conversion_rate = Column(Numeric(5, 2), default=0.00)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relaciones
+    purchases = relationship("UserPurchase", back_populates="shop_item")
+    game_item = relationship("Item", back_populates="shop_item", uselist=False)
+
+    def __repr__(self):
+        return f"<ShopItem(name={self.name}, type={self.type}, price_besitos={self.price_besitos})>"
+
+    def to_dict(self):
+        """Convert shop item to dictionary"""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "type": self.type,
+            "category": self.category,
+            "price_besitos": self.price_besitos,
+            "price_real": float(self.price_real) if self.price_real else None,
+            "currency": self.currency,
+            "is_available": self.is_available,
+            "stock": self.stock,
+            "is_limited_time": self.is_limited_time,
+            "available_from": self.available_from.isoformat() if self.available_from else None,
+            "available_until": self.available_until.isoformat() if self.available_until else None,
+            "discount_percentage": self.discount_percentage,
+            "discount_expires_at": self.discount_expires_at.isoformat() if self.discount_expires_at else None,
+            "rarity": self.rarity,
+            "image_url": self.image_url,
+            "tags": self.tags,
+            "unlocks_content_type": self.unlocks_content_type,
+            "unlocks_content_id": self.unlocks_content_id,
+            "unlocks_data": self.unlocks_data,
+            "purchase_requirements": self.purchase_requirements,
+            "view_count": self.view_count,
+            "purchase_count": self.purchase_count,
+            "conversion_rate": float(self.conversion_rate) if self.conversion_rate else 0.0,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None,
+            "updated_at": self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else None
+        }
+
+
+class UserPurchase(Base):
+    """User purchase model for commerce system"""
+    __tablename__ = "user_purchases"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    shop_item_id = Column(Integer, ForeignKey('shop_items.id'), nullable=False)
+    
+    # Detalles de compra
+    purchase_type = Column(String(50))  # besitos, real_money, reward, gift
+    amount_paid = Column(Numeric(10, 2))
+    currency = Column(String(3), default='USD')
+    besitos_spent = Column(Integer, nullable=True)
+    
+    # Estado
+    status = Column(String(50), default='pending')  # pending, completed, failed, refunded
+    
+    # Telegram Payment info
+    telegram_payment_charge_id = Column(String(255), nullable=True)
+    provider_payment_charge_id = Column(String(255), nullable=True)
+    
+    # Metadata
+    unlocks_applied = Column(Boolean, default=False)
+    unlocks_applied_at = Column(DateTime, nullable=True)
+    
+    purchase_date = Column(DateTime, default=datetime.utcnow)
+    
+    # Tracking
+    purchase_context = Column(JSON, nullable=True)
+    # Ejemplo:
+    # {
+    #     "source": "narrative_unlock_prompt",
+    #     "fragment_id": 15,
+    #     "offer_type": "contextual"
+    # }
+    
+    # Relaciones
+    user = relationship("User", back_populates="purchases")
+    shop_item = relationship("ShopItem", back_populates="purchases")
+
+    def __repr__(self):
+        return f"<UserPurchase(user_id={self.user_id}, shop_item_id={self.shop_item_id}, status={self.status})>"
+
+    def to_dict(self):
+        """Convert user purchase to dictionary"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "shop_item_id": self.shop_item_id,
+            "purchase_type": self.purchase_type,
+            "amount_paid": float(self.amount_paid) if self.amount_paid else None,
+            "currency": self.currency,
+            "besitos_spent": self.besitos_spent,
+            "status": self.status,
+            "telegram_payment_charge_id": self.telegram_payment_charge_id,
+            "provider_payment_charge_id": self.provider_payment_charge_id,
+            "unlocks_applied": self.unlocks_applied,
+            "unlocks_applied_at": self.unlocks_applied_at.isoformat() if self.unlocks_applied_at else None,
+            "purchase_date": self.purchase_date.isoformat() if hasattr(self.purchase_date, 'isoformat') else None,
+            "purchase_context": self.purchase_context
+        }
+
+
+class UserArchetype(Base):
+    """User archetype model for personalization"""
+    __tablename__ = "user_archetypes"
+    
+    user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
+    primary_archetype = Column(String(50), nullable=False)
+    secondary_archetype = Column(String(50), nullable=True)
+    confidence_score = Column(Numeric(3, 2), default=0.00)  # 0.00 - 1.00
+    
+    # Scores por arquetipo
+    archetype_scores = Column(JSON)
+    # Ejemplo:
+    # {
+    #     "NARRATIVE_LOVER": 0.85,
+    #     "COLLECTOR": 0.62,
+    #     "COMPETITIVE": 0.45,
+    #     "SOCIAL": 0.38,
+    #     "COMPLETIONIST": 0.71
+    # }
+    
+    # Comportamiento detectado
+    behavior_patterns = Column(JSON)
+    # Ejemplo:
+    # {
+    #     "content_preference": "narrative",
+    #     "spending_tendency": "high",
+    #     "engagement_frequency": "daily",
+    #     "social_activity": "moderate"
+    # }
+    
+    last_updated = Column(DateTime, default=datetime.utcnow)
+    last_analyzed = Column(DateTime, default=datetime.utcnow)
+    
+    # Relaciones
+    user = relationship("User", back_populates="archetype_data")
+
+    def __repr__(self):
+        return f"<UserArchetype(user_id={self.user_id}, primary={self.primary_archetype}, confidence={self.confidence_score})>"
+
+    def to_dict(self):
+        """Convert user archetype to dictionary"""
+        return {
+            "user_id": self.user_id,
+            "primary_archetype": self.primary_archetype,
+            "secondary_archetype": self.secondary_archetype,
+            "confidence_score": float(self.confidence_score) if self.confidence_score else 0.0,
+            "archetype_scores": self.archetype_scores,
+            "behavior_patterns": self.behavior_patterns,
+            "last_updated": self.last_updated.isoformat() if hasattr(self.last_updated, 'isoformat') else None,
+            "last_analyzed": self.last_analyzed.isoformat() if hasattr(self.last_analyzed, 'isoformat') else None
+        }
+
+
+class VIPSubscription(Base):
+    """VIP subscription model for commerce system"""
+    __tablename__ = "vip_subscriptions"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    subscription_type = Column(String(50), nullable=False)  # monthly, annual, lifetime, trial
+    
+    # Fechas
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=True)  # NULL para lifetime
+    
+    # Estado
+    is_active = Column(Boolean, default=True)
+    auto_renew = Column(Boolean, default=False)
+    
+    # Pago
+    payment_method = Column(String(50))
+    amount_paid = Column(Numeric(10, 2))
+    currency = Column(String(3), default='USD')
+    
+    # Telegram Payment info
+    telegram_payment_charge_id = Column(String(255), nullable=True)
+    
+    # Tracking
+    cancelled_at = Column(DateTime, nullable=True)
+    cancellation_reason = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relaciones
+    user = relationship("User", backref="vip_subscriptions")
+
+    def __repr__(self):
+        return f"<VIPSubscription(user_id={self.user_id}, type={self.subscription_type}, is_active={self.is_active})>"
+
+    def to_dict(self):
+        """Convert VIP subscription to dictionary"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "subscription_type": self.subscription_type,
+            "start_date": self.start_date.isoformat() if hasattr(self.start_date, 'isoformat') else None,
+            "end_date": self.end_date.isoformat() if self.end_date else None,
+            "is_active": self.is_active,
+            "auto_renew": self.auto_renew,
+            "payment_method": self.payment_method,
+            "amount_paid": float(self.amount_paid) if self.amount_paid else None,
+            "currency": self.currency,
+            "telegram_payment_charge_id": self.telegram_payment_charge_id,
+            "cancelled_at": self.cancelled_at.isoformat() if self.cancelled_at else None,
+            "cancellation_reason": self.cancellation_reason,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None,
+            "updated_at": self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else None
+        }
+
+
+class PersonalizedOffer(Base):
+    """Personalized offer model for commerce system"""
+    __tablename__ = "personalized_offers"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    shop_item_id = Column(Integer, ForeignKey('shop_items.id'), nullable=False)
+    
+    # Personalización
+    offer_type = Column(String(50))  # contextual, archetype_based, upsell, retention
+    discount_percentage = Column(Integer, default=0)
+    custom_message = Column(Text, nullable=True)
+    
+    # Contexto
+    trigger_event = Column(String(100), nullable=True)
+    trigger_context = Column(JSON, nullable=True)
+    
+    # Validez
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    
+    # Estado
+    is_active = Column(Boolean, default=True)
+    viewed = Column(Boolean, default=False)
+    viewed_at = Column(DateTime, nullable=True)
+    accepted = Column(Boolean, default=False)
+    accepted_at = Column(DateTime, nullable=True)
+    
+    # Relaciones
+    user = relationship("User")
+    shop_item = relationship("ShopItem")
+
+    def __repr__(self):
+        return f"<PersonalizedOffer(user_id={self.user_id}, shop_item_id={self.shop_item_id}, discount={self.discount_percentage}%)>"
+
+    def to_dict(self):
+        """Convert personalized offer to dictionary"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "shop_item_id": self.shop_item_id,
+            "offer_type": self.offer_type,
+            "discount_percentage": self.discount_percentage,
+            "custom_message": self.custom_message,
+            "trigger_event": self.trigger_event,
+            "trigger_context": self.trigger_context,
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else None,
+            "expires_at": self.expires_at.isoformat() if hasattr(self.expires_at, 'isoformat') else None,
+            "is_active": self.is_active,
+            "viewed": self.viewed,
+            "viewed_at": self.viewed_at.isoformat() if self.viewed_at else None,
+            "accepted": self.accepted,
+            "accepted_at": self.accepted_at.isoformat() if self.accepted_at else None
         }

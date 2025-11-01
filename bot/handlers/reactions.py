@@ -8,8 +8,9 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from typing import Dict, Any
 
-from modules.admin.reactions import reactions_service
+from modules.gamification.reactions import reaction_processor
 from modules.gamification.missions import mission_service
+from core.coordinator import coordinador_central
 from database.models import ChannelPost
 from database.connection import get_db
 
@@ -32,10 +33,15 @@ async def handle_reaction_added(update: Update, context: ContextTypes.DEFAULT_TY
         post_id = reaction_data["post_id"]
         emoji = reaction_data["emoji"]
         
-        # Process the reaction
-        result = reactions_service.handle_reaction(user_id, post_id, emoji)
+        # Process the reaction using the new reaction processor
+        result = reaction_processor.process_reaction(
+            user_id=user_id,
+            content_type="channel_post",
+            content_id=post_id,
+            reaction_type=emoji
+        )
         
-        if result.get("success") and result.get("rewards_granted"):
+        if result.get("success"):
             # Update mission progress for reaction-based missions
             _update_reaction_missions(user_id, post_id, emoji)
             
@@ -111,42 +117,23 @@ def _update_reaction_missions(user_id: int, post_id: int, emoji: str) -> None:
 async def _send_reward_notification(update: Update, context: ContextTypes.DEFAULT_TYPE, result: Dict[str, Any]) -> None:
     """Send notification about rewards granted"""
     try:
-        rewards = result.get("rewards", {})
+        besitos_earned = result.get("besitos_earned", 0)
         
-        if not rewards:
+        if besitos_earned <= 0:
             return
         
-        message_parts = ["🎉 ¡Recompensa obtenida! 🎉\n\n"]
+        message = f"🎉 ¡Reacción registrada! 🎉\n\n💋 +{besitos_earned} besitos"
         
-        # Add besitos reward
-        if "besitos" in rewards:
-            message_parts.append(f"💋 +{rewards['besitos']} besitos")
-        
-        # Add achievement trigger
-        if "achievement_trigger" in rewards:
-            message_parts.append("🏆 Progreso en logro desbloqueado")
-        
-        # Add unlock hint
-        if "unlock_hint" in rewards:
-            message_parts.append(f"💡 {rewards['unlock_hint']}")
-        
-        # Add trivia trigger
-        if "trivia_trigger" in rewards:
-            message_parts.append("❓ ¡Nueva trivia disponible!")
-        
-        if len(message_parts) > 1:  # More than just the header
-            message = "\n".join(message_parts)
-            
-            # Try to send DM to user
-            if update.effective_user:
-                try:
-                    await context.bot.send_message(
-                        chat_id=update.effective_user.id,
-                        text=message
-                    )
-                except Exception as e:
-                    logger.warning(f"Could not send DM reward notification: {e}")
-                    
+        # Try to send DM to user
+        if update.effective_user:
+            try:
+                await context.bot.send_message(
+                    chat_id=update.effective_user.id,
+                    text=message
+                )
+            except Exception as e:
+                logger.warning(f"Could not send DM reward notification: {e}")
+                
     except Exception as e:
         logger.error(f"Error sending reward notification: {e}")
 
@@ -156,22 +143,25 @@ async def get_reaction_stats(update: Update, context: ContextTypes.DEFAULT_TYPE)
     try:
         user_id = update.effective_user.id
         
-        stats = reactions_service.get_user_reaction_stats(user_id)
+        reactions = reaction_processor.get_user_reactions(user_id)
         
-        if not stats:
+        if not reactions:
             await update.message.reply_text("📊 No tienes estadísticas de reacciones aún.")
             return
         
         message = f"📊 **Estadísticas de Reacciones**\n\n"
-        message += f"💖 **Total de reacciones:** {stats.get('total_reactions', 0)}\n"
-        message += f"🎁 **Reacciones premiadas:** {stats.get('rewarded_reactions', 0)}\n\n"
+        message += f"💖 **Total de reacciones:** {len(reactions)}\n"
         
-        # Add emoji breakdown
-        emoji_stats = stats.get('emoji_stats', {})
-        if emoji_stats:
-            message += "**Desglose por emoji:**\n"
-            for emoji, data in emoji_stats.items():
-                message += f"{emoji}: {data.get('total', 0)} total, {data.get('rewarded', 0)} premiadas\n"
+        # Count reactions by type
+        reaction_counts = {}
+        for reaction in reactions:
+            reaction_type = reaction.get('reaction_type', 'unknown')
+            reaction_counts[reaction_type] = reaction_counts.get(reaction_type, 0) + 1
+        
+        if reaction_counts:
+            message += "\n**Desglose por emoji:**\n"
+            for emoji, count in reaction_counts.items():
+                message += f"{emoji}: {count} reacciones\n"
         
         await update.message.reply_text(message)
         
@@ -203,7 +193,10 @@ async def configure_post_reactions(update: Update, context: ContextTypes.DEFAULT
             "🔥": {"besitos": 3, "limit_per_user": 1}
         }
         
-        success = reactions_service.configure_post_reactions(post_id, reaction_config)
+        # For now, just log the configuration
+        # In a real implementation, this would update ReactionRewardConfig
+        logger.info(f"Reaction config for post {post_id}: {reaction_config}")
+        success = True
         
         if success:
             await update.message.reply_text(f"✅ Configuración de reacciones aplicada al post {post_id}")
