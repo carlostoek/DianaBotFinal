@@ -9,7 +9,6 @@ de rollback en caso de fallo.
 import logging
 from typing import Any, Callable, Dict, List, Optional
 from datetime import datetime
-from modules.gamification.reactions import reaction_processor
 
 logger = logging.getLogger(__name__)
 
@@ -229,6 +228,8 @@ class DistributedTransaction:
     def _gamification_register_reaction(self, user_id: int, content_type: str, content_id: int, reaction: str) -> Dict[str, Any]:
         """Registra reacción usando el módulo de gamificación"""
         try:
+            from modules.gamification.reactions import reaction_processor
+            
             result = reaction_processor.process_reaction(
                 user_id=user_id,
                 content_type=content_type,
