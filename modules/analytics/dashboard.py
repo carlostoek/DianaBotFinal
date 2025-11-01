@@ -7,9 +7,18 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
+from enum import Enum
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
+
+
+class CohortDefinition(str, Enum):
+    """Valid cohort definition types"""
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    QUARTERLY = "quarterly"
 
 
 @dataclass
@@ -103,7 +112,14 @@ class DashboardDataProvider:
     
     def get_cohort_analysis(self, cohort_definition: str = "monthly") -> List[CohortAnalysis]:
         """Get cohort analysis data"""
-        logger.info(f"Getting cohort analysis for {cohort_definition}")
+        # Validate cohort definition
+        try:
+            cohort_enum = CohortDefinition(cohort_definition.lower())
+        except ValueError:
+            logger.warning(f"Invalid cohort definition: {cohort_definition}, defaulting to monthly")
+            cohort_enum = CohortDefinition.MONTHLY
+        
+        logger.info(f"Getting cohort analysis for {cohort_enum.value}")
         
         # Placeholder implementation
         return [

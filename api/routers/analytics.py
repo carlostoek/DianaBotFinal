@@ -95,7 +95,7 @@ async def get_metrics_summary(
         monetization={
             "active_vip_subs": active_vip_subs,
             "conversion_rate": conversion_rate,
-            "mrr": overview.total_revenue_month / 30,  # Monthly recurring revenue
+            "mrr": overview.total_revenue_month,  # Monthly recurring revenue
             "arpu": overview.total_revenue_month / overview.active_users_month
             if overview.active_users_month > 0
             else 0,
@@ -158,7 +158,7 @@ async def get_monetization_metrics(
     return MonetizationMetricsResponse(
         active_vip_subs=active_vip_subs,
         conversion_rate=conversion_rate,
-        mrr=overview.total_revenue_month / 30,  # Monthly recurring revenue
+        mrr=overview.total_revenue_month,  # Monthly recurring revenue
         arpu=overview.total_revenue_month / overview.active_users_month
         if overview.active_users_month > 0
         else 0,
@@ -261,9 +261,24 @@ def count_completions(
 
 def get_avg_level_completion(db: Session) -> float:
     """Get average level completion rate"""
-    # TODO: Implement actual average level completion calculation
-    # For now, return placeholder
-    return 0.0
+    try:
+        # Calculate average completion rate across all users
+        total_users = db.query(User).count()
+        if total_users == 0:
+            return 0.0
+        
+        # Get users with narrative progress
+        users_with_progress = (
+            db.query(UserNarrativeProgress.user_id)
+            .distinct()
+            .count()
+        )
+        
+        # Calculate completion rate as percentage of users with progress
+        completion_rate = (users_with_progress / total_users) * 100
+        return round(completion_rate, 2)
+    except Exception:
+        return 0.0
 
 
 def get_total_besitos(db: Session) -> int:
@@ -276,9 +291,25 @@ def count_transactions(
     db: Session, hours: Optional[int] = 24, days: Optional[int] = None
 ) -> int:
     """Count transactions in given time period"""
-    # TODO: Implement actual transaction counting
-    # For now, return placeholder
-    return 0
+    try:
+        from database.models import Transaction
+        
+        cutoff_time = datetime.now()
+        if hours:
+            cutoff_time = datetime.now() - timedelta(hours=hours)
+        elif days:
+            cutoff_time = datetime.now() - timedelta(days=days)
+        
+        return (
+            db.query(Transaction)
+            .filter(
+                Transaction.created_at >= cutoff_time,
+                Transaction.status == 'completed'
+            )
+            .count()
+        )
+    except Exception:
+        return 0
 
 
 @router.get("/users/growth")

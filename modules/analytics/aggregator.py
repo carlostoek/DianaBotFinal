@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 from sqlalchemy import func, and_, or_, text
 from sqlalchemy.orm import Session
+from database.models import AnalyticsEvent, Transaction, User, Subscription
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +138,7 @@ class MetricsAggregator:
         free_to_vip_conversion = self._get_free_to_vip_conversion(time_range)
         
         # Get LTV (Lifetime Value)
-        ltv = self._get_ltv(time_range)
+        ltv = self._get_ltv(time_range, avg_customer_lifetime_months=6)
         
         # Get revenue by product
         revenue_by_product = self._get_revenue_by_product(time_range)
@@ -201,8 +202,6 @@ class MetricsAggregator:
     
     def _get_monthly_active_users(self, time_range: TimeRange) -> int:
         """Get monthly active users count"""
-        from database.models import AnalyticsEvent
-        
         result = self.db.query(func.count(func.distinct(AnalyticsEvent.user_id))).filter(
             and_(
                 AnalyticsEvent.timestamp >= time_range.start_date,
@@ -214,8 +213,6 @@ class MetricsAggregator:
     
     def _get_daily_active_users(self, time_range: TimeRange) -> int:
         """Get daily active users count (average over time range)"""
-        from database.models import AnalyticsEvent
-        
         # Get unique users per day and average
         daily_counts = self.db.query(
             func.date(AnalyticsEvent.timestamp),
@@ -237,10 +234,11 @@ class MetricsAggregator:
     
     def _get_retention_rate(self, time_range: TimeRange, days: int) -> float:
         """Get retention rate for given number of days"""
-        # This is a simplified implementation
-        # In production, you'd need cohort analysis
-        from database.models import AnalyticsEvent
         
+        # Ensure we have enough data for the retention period
+        if days <= 0:
+            return 0.0
+            
         # Get users who had activity in the first day of the range
         cohort_start = time_range.start_date
         cohort_end = cohort_start + timedelta(days=1)
@@ -258,8 +256,13 @@ class MetricsAggregator:
         cohort_user_ids = [user_id for (user_id,) in cohort_users]
         
         # Check how many of these users were active after N days
-        retention_start = cohort_start + timedelta(days=days)
-        retention_end = retention_start + timedelta(days=1)
+        # Use a window of 3 days around the target day to account for variability
+        retention_start = cohort_start + timedelta(days=max(1, days - 1))
+        retention_end = cohort_start + timedelta(days=days + 1)
+        
+        # Ensure we don't exceed the time range end date
+        if retention_end > time_range.end_date:
+            return 0.0
         
         retained_users = self.db.query(func.distinct(AnalyticsEvent.user_id)).filter(
             and_(
@@ -269,7 +272,8 @@ class MetricsAggregator:
             )
         ).count()
         
-        return retained_users / len(cohort_user_ids) if cohort_user_ids else 0.0
+        retention_rate = retained_users / len(cohort_user_ids) if cohort_user_ids else 0.0
+        return round(retention_rate * 100, 2)  # Return as percentage
     
     def _get_avg_session_duration(self, time_range: TimeRange) -> float:
         """Get average session duration in seconds"""
@@ -279,7 +283,6 @@ class MetricsAggregator:
     
     def _get_engagement_by_module(self, time_range: TimeRange) -> Dict[str, int]:
         """Get engagement count by module"""
-        from database.models import AnalyticsEvent
         
         # Group events by event_type (which corresponds to modules)
         module_engagement = self.db.query(
@@ -296,7 +299,6 @@ class MetricsAggregator:
     
     def _get_total_revenue(self, time_range: TimeRange) -> float:
         """Get total revenue for time range"""
-        from database.models import Transaction
         
         result = self.db.query(func.sum(Transaction.amount)).filter(
             and_(
@@ -317,7 +319,6 @@ class MetricsAggregator:
     
     def _get_arppu(self, time_range: TimeRange) -> float:
         """Get Average Revenue Per Paying User"""
-        from database.models import Transaction
         
         total_revenue = self._get_total_revenue(time_range)
         
@@ -333,33 +334,42 @@ class MetricsAggregator:
         return total_revenue / paying_users if paying_users > 0 else 0.0
     
     def _get_free_to_vip_conversion(self, time_range: TimeRange) -> float:
-        """Get free to VIP conversion rate"""
-        from database.models import User, Subscription
+        """Get free to VIP conversion rate within time range"""
         
-        # Get total users
-        total_users = self.db.query(func.count(User.id)).scalar()
-        
-        # Get VIP users
-        vip_users = self.db.query(func.count(func.distinct(Subscription.user_id))).filter(
-            and_(
-                Subscription.status == 'active',
-                Subscription.created_at <= time_range.end_date
+        # Get users who were free at the start of the time range
+        free_users_at_start = self.db.query(func.count(User.id)).filter(
+            ~User.id.in_(
+                self.db.query(Subscription.user_id).filter(
+                    Subscription.created_at < time_range.start_date,
+                    Subscription.status == 'active'
+                )
             )
         ).scalar()
         
-        return vip_users / total_users if total_users > 0 else 0.0
+        if free_users_at_start == 0:
+            return 0.0
+        
+        # Get users who converted to VIP during the time range
+        converted_users = self.db.query(func.count(func.distinct(Subscription.user_id))).filter(
+            and_(
+                Subscription.created_at >= time_range.start_date,
+                Subscription.created_at <= time_range.end_date,
+                Subscription.status == 'active'
+            )
+        ).scalar()
+        
+        conversion_rate = converted_users / free_users_at_start
+        return round(conversion_rate * 100, 2)  # Return as percentage
     
-    def _get_ltv(self, time_range: TimeRange) -> float:
+    def _get_ltv(self, time_range: TimeRange, avg_customer_lifetime_months: int = 6) -> float:
         """Get Lifetime Value (simplified calculation)"""
         # Simplified LTV calculation
         arpu = self._get_arpu(time_range)
-        avg_customer_lifetime = 6  # months (placeholder)
         
-        return arpu * avg_customer_lifetime
+        return arpu * avg_customer_lifetime_months
     
     def _get_revenue_by_product(self, time_range: TimeRange) -> Dict[str, float]:
         """Get revenue breakdown by product"""
-        from database.models import Transaction
         
         revenue_by_product = self.db.query(
             Transaction.product_type,
@@ -376,7 +386,6 @@ class MetricsAggregator:
     
     def _get_most_visited_fragments(self, time_range: TimeRange) -> List[Dict[str, Any]]:
         """Get most visited narrative fragments"""
-        from database.models import AnalyticsEvent
         
         fragments = self.db.query(
             AnalyticsEvent.metadata['content_id'].astext.label('fragment_id'),
@@ -403,7 +412,6 @@ class MetricsAggregator:
     
     def _get_popular_decisions(self, time_range: TimeRange) -> List[Dict[str, Any]]:
         """Get popular narrative decisions"""
-        from database.models import AnalyticsEvent
         
         decisions = self.db.query(
             AnalyticsEvent.metadata['decision_id'].astext.label('decision_id'),
@@ -447,7 +455,6 @@ class MetricsAggregator:
     
     def _get_popular_experiences(self, time_range: TimeRange) -> List[Dict[str, Any]]:
         """Get popular experiences"""
-        from database.models import AnalyticsEvent
         
         experiences = self.db.query(
             AnalyticsEvent.metadata['experience_id'].astext.label('experience_id'),
