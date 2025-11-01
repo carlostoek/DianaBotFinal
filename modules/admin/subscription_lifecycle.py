@@ -5,7 +5,7 @@ Manages automated subscription workflows, conversion funnels, and lifecycle even
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, List
 from enum import Enum
 from sqlalchemy.orm import Session
@@ -33,8 +33,8 @@ class SubscriptionStage(Enum):
 class SubscriptionLifecycle:
     """Manages subscription lifecycle and conversion funnels"""
     
-    def __init__(self):
-        self.db: Session = next(get_db())
+    def __init__(self, db: Session):
+        self.db: Session = db
         self.archetype_engine = ArchetypeEngine(self.db)
         self.event_bus = event_bus
         self.coordinator = CoordinadorCentral(event_bus)
@@ -191,9 +191,8 @@ class SubscriptionLifecycle:
                 return False
             
             # Calculate time to convert - handle timezone mismatch
-            current_time = datetime.now()
-            entered_at = funnel.entered_at.replace(tzinfo=None) if funnel.entered_at and funnel.entered_at.tzinfo else funnel.entered_at
-            time_to_convert = (current_time - entered_at).total_seconds()
+            current_time = datetime.now(timezone.utc)
+            time_to_convert = (current_time - funnel.entered_at).total_seconds()
             
             # Update funnel
             funnel.stage_completed = final_stage
@@ -504,37 +503,33 @@ class SubscriptionLifecycle:
             return False
 
 
-# Global instance
-subscription_lifecycle = SubscriptionLifecycle()
-
-
 # Convenience functions
-def start_conversion_funnel(user_id: int, funnel_type: str, initial_stage: str) -> bool:
+def start_conversion_funnel(db: Session, user_id: int, funnel_type: str, initial_stage: str) -> bool:
     """Start tracking a user's conversion journey"""
-    service = SubscriptionLifecycle()
+    service = SubscriptionLifecycle(db)
     return service.start_conversion_funnel(user_id, funnel_type, initial_stage)
 
-def update_conversion_stage(funnel_id: int, new_stage: str, metadata: Optional[Dict] = None) -> bool:
+def update_conversion_stage(db: Session, funnel_id: int, new_stage: str, metadata: Optional[Dict] = None) -> bool:
     """Update user's current stage in conversion funnel"""
-    service = SubscriptionLifecycle()
+    service = SubscriptionLifecycle(db)
     return service.update_conversion_stage(funnel_id, new_stage, metadata)
 
-def complete_conversion_funnel(funnel_id: int, final_stage: str, conversion_data: Dict) -> bool:
+def complete_conversion_funnel(db: Session, funnel_id: int, final_stage: str, conversion_data: Dict) -> bool:
     """Mark conversion funnel as completed"""
-    service = SubscriptionLifecycle()
+    service = SubscriptionLifecycle(db)
     return service.complete_conversion_funnel(funnel_id, final_stage, conversion_data)
 
-def track_offer_interaction(user_id: int, offer_type: str, interaction_type: str, metadata: Dict) -> bool:
+def track_offer_interaction(db: Session, user_id: int, offer_type: str, interaction_type: str, metadata: Dict) -> bool:
     """Track user interaction with offers"""
-    service = SubscriptionLifecycle()
+    service = SubscriptionLifecycle(db)
     return service.track_offer_interaction(user_id, offer_type, interaction_type, metadata)
 
-def get_contextual_offers(user_id: int) -> List[Dict[str, Any]]:
+def get_contextual_offers(db: Session, user_id: int) -> List[Dict[str, Any]]:
     """Get contextual offers based on user's conversion stage and archetype"""
-    service = SubscriptionLifecycle()
+    service = SubscriptionLifecycle(db)
     return service.get_contextual_offers(user_id)
 
-def handle_subscription_conversion(user_id: int, subscription_type: str, payment_data: Dict) -> bool:
+def handle_subscription_conversion(db: Session, user_id: int, subscription_type: str, payment_data: Dict) -> bool:
     """Handle subscription conversion and complete relevant funnels"""
-    service = SubscriptionLifecycle()
+    service = SubscriptionLifecycle(db)
     return service.handle_subscription_conversion(user_id, subscription_type, payment_data)

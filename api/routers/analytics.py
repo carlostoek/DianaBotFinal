@@ -103,14 +103,14 @@ async def get_metrics_summary(
         },
         narrative={
             "fragments_completed_today": fragments_completed_today,
-            "avg_level_completion": 0.0,  # Placeholder
+            "avg_level_completion": get_avg_level_completion(db),
             "most_popular_decision": "",  # Placeholder
             "avg_time_to_complete_fragment": 0.0,  # Placeholder
             "completion_rate": 0.0,  # Placeholder
         },
         gamification={
             "besitos_in_circulation": besitos_in_circulation,
-            "transactions_today": 0,  # Placeholder
+            "transactions_today": count_transactions(db, hours=24),  # Placeholder
             "missions_completed_today": 0,  # Placeholder
             "achievements_unlocked_today": 0,  # Placeholder
             "active_missions": 0,  # Placeholder
@@ -501,11 +501,8 @@ async def get_conversion_funnel_analytics(
 
         # Get conversion rates by funnel type
         conversion_rates = []
-        for funnel_type in [
-            "free_to_vip",
-            "engagement_to_purchase",
-            "free_to_purchaser",
-        ]:
+        funnel_types_query = db.query(ConversionFunnel.funnel_type).distinct().all()
+        for (funnel_type,) in funnel_types_query:
             total_type = (
                 db.query(ConversionFunnel)
                 .filter(ConversionFunnel.funnel_type == funnel_type)

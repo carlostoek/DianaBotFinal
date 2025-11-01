@@ -38,7 +38,7 @@ async def subscription_offers(update: Update, context: ContextTypes.DEFAULT_TYPE
             message += "Usa /vip_content para ver tu contenido exclusivo."
         else:
             # Get contextual offers
-            lifecycle = SubscriptionLifecycle()
+            lifecycle = SubscriptionLifecycle(db)
             offers = lifecycle.get_contextual_offers(user_id)
             
             if offers:
@@ -85,7 +85,7 @@ async def subscription_conversion(update: Update, context: ContextTypes.DEFAULT_
     
     try:
         # Start conversion funnel for free users
-        lifecycle = SubscriptionLifecycle()
+        lifecycle = SubscriptionLifecycle(db)
         
         # Check if user is VIP
         is_user_vip = is_vip(db, user_id)
@@ -132,7 +132,7 @@ async def subscription_analytics(update: Update, context: ContextTypes.DEFAULT_T
     db: Session = next(get_db())
     
     try:
-        lifecycle = SubscriptionLifecycle()
+        lifecycle = SubscriptionLifecycle(db)
         
         message = "📊 **ANALÍTICAS DE SUSCRIPCIÓN** 📊\n\n"
         message += "**Tu Progreso de Conversión:**\n"
