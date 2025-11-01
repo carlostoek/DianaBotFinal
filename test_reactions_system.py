@@ -33,9 +33,16 @@ class TestReactionSystem(unittest.TestCase):
     @patch('modules.gamification.reactions.event_bus')
     def test_process_reaction_success(self, mock_event_bus, mock_besitos_service, mock_get_db):
         """Test successful reaction processing"""
-        # Mock database session
+        # Mock database session as an iterator
         mock_db = Mock()
-        mock_get_db.return_value = mock_db
+        mock_db_session = Mock()
+        mock_get_db.return_value = iter([mock_db_session])
+        
+        # Mock database operations
+        mock_db_session.query.return_value.filter.return_value.first.return_value = None  # No existing reaction
+        mock_db_session.add = Mock()
+        mock_db_session.commit = Mock()
+        mock_db_session.refresh = Mock()
         
         # Mock besitos service
         mock_besitos_service.grant_besitos.return_value = True
@@ -94,7 +101,8 @@ class TestReactionSystem(unittest.TestCase):
         # Should return a list
         self.assertIsInstance(reactions, list)
     
-    def test_coordinator_reaction_operation(self):
+    @patch('core.coordinator.CoordinadorCentral.transaction_manager')
+    def test_coordinator_reaction_operation(self, mock_transaction_manager):
         """Test coordinator reaction operation"""
         # Mock transaction manager
         mock_tx = Mock()
@@ -102,7 +110,10 @@ class TestReactionSystem(unittest.TestCase):
         mock_tx.on_commit = Mock()
         
         # Mock transaction manager context
-        self.coordinator.transaction_manager.begin.return_value.__enter__.return_value = mock_tx
+        mock_context = Mock()
+        mock_context.__enter__ = Mock(return_value=mock_tx)
+        mock_context.__exit__ = Mock(return_value=None)
+        mock_transaction_manager.begin.return_value = mock_context
         
         # Test data
         user_id = 123

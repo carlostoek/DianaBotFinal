@@ -162,7 +162,7 @@ class EventCollector:
                 'user_id': event.user_id,
                 'session_id': event.session_id,
                 'timestamp': event.timestamp,
-                'metadata': event.metadata
+                'event_metadata': event.metadata
             })
         
         # Batch insert events

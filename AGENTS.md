@@ -21,8 +21,11 @@ You are responsible for implementing a single, specific task from a specificatio
 
 2. **Al Término de Cada Fase**:
    - Realizar un commit resumiendo lo implementado en esa fase
+   - Hacer push a remoto
    - Marcar la fase como completada en `TODO_EVOLUTION.md` agregando una línea: "Fase X completada"
    - Pasar automáticamente a la siguiente fase sin solicitar confirmación
+   - Realíza tests con datos reales utiliza mocks únicamente con servicios que no dependan de nosotros
+   - Si hay problemas con los test no simplifiques el test verifica cuál es el error y solucionarlo para poder ejecutar tu test
 
 3. **Estructura de Fases**:
    - Las fases están divididas por archivos en `docs/fases_evolución/`

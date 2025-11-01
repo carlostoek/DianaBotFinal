@@ -5,7 +5,7 @@ from sqlalchemy import and_, func
 from datetime import datetime, timedelta
 from database.connection import get_db
 from core.event_bus import event_bus
-from .besitos import besitos_service
+from modules.gamification.besitos import besitos_service
 
 logger = logging.getLogger(__name__)
 
