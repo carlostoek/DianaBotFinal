@@ -88,4 +88,5 @@ import random
 #         }
 #         self.client.post("/webhook", json=payload, headers=self.headers)
 
-print("Locust load testing file created. Install locust with: pip install locust==2.20.1")
+if __name__ == "__main__":
+    print("Locust load testing file created. Install locust with: pip install locust==2.20.1")

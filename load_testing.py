@@ -59,7 +59,7 @@ class LoadTester:
             
             return success, response_time
             
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             self.stats["total_requests"] += 1
             self.stats["failed_requests"] += 1
             return False, 0
@@ -172,7 +172,7 @@ class LoadTester:
         
         if self.stats['total_requests'] > 0:
             success_rate = (self.stats['successful_requests'] / self.stats['total_requests']) * 100
-            avg_response_time = self.stats['total_response_time'] / self.stats['total_requests']
+            avg_response_time = self.stats['total_response_time'] / len(self.results) if self.results else 0
             
             print(f"Success Rate: {success_rate:.2f}%")
             print(f"Average Response Time: {avg_response_time:.2f}ms")

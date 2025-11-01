@@ -4,6 +4,7 @@ Provides intelligent caching with TTL, invalidation, and performance monitoring
 """
 import json
 import logging
+import time
 from typing import Any, Dict, Optional, Callable
 from functools import wraps
 
@@ -23,8 +24,14 @@ class CacheManager:
         """Get value from cache"""
         try:
             if key in self._cache:
-                self.cache_hits += 1
-                return self._cache[key]
+                value, expiration_time = self._cache[key]
+                if time.time() < expiration_time:
+                    self.cache_hits += 1
+                    return value
+                else:
+                    # Expired, delete it and fall through to miss
+                    del self._cache[key]
+
             self.cache_misses += 1
             return None
         except Exception as e:
@@ -34,7 +41,10 @@ class CacheManager:
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
         """Set value in cache with TTL"""
         try:
-            self._cache[key] = value
+            if ttl is None:
+                ttl = self.default_ttl
+            expiration_time = time.time() + ttl
+            self._cache[key] = (value, expiration_time)
             return True
         except Exception as e:
             logger.error(f"Cache set error for key {key}: {e}")
@@ -81,38 +91,44 @@ class CacheManager:
         self.cache_misses = 0
 
 
-def cached(ttl: int = 300, key_prefix: str = "cache"):
+def cached(ttl: int = 300, key_prefix: str = "cache", cache_instance: Optional[CacheManager] = None):
     """Decorator for caching function results"""
     def decorator(func: Callable):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            # Use provided cache instance or default to global cache_manager
+            cache = cache_instance or cache_manager
+            
             # Generate cache key from function name and arguments
-            cache_key = f"{key_prefix}:{func.__name__}:{hash(str(args) + str(kwargs))}"
+            cache_key = f"{key_prefix}:{func.__name__}:{hash(str(args) + json.dumps(kwargs, sort_keys=True))}"
             
             # Try to get from cache
-            cached_result = cache_manager.get(cache_key)
+            cached_result = cache.get(cache_key)
             if cached_result is not None:
                 return cached_result
             
             # Execute function and cache result
             result = func(*args, **kwargs)
-            cache_manager.set(cache_key, result, ttl)
+            cache.set(cache_key, result, ttl)
             
             return result
         return wrapper
     return decorator
 
 
-def cache_invalidate(pattern: str):
+def cache_invalidate(pattern: str, cache_instance: Optional[CacheManager] = None):
     """Decorator for invalidating cache patterns"""
     def decorator(func: Callable):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            # Use provided cache instance or default to global cache_manager
+            cache = cache_instance or cache_manager
+            
             # Execute function first
             result = func(*args, **kwargs)
             
             # Invalidate cache pattern
-            cache_manager.invalidate_pattern(pattern)
+            cache.invalidate_pattern(pattern)
             
             return result
         return wrapper

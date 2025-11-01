@@ -83,7 +83,10 @@ def test_cached_decorator():
     """Test @cached decorator"""
     print("\nTesting @cached decorator...")
     
-    @cached(ttl=60)
+    # Create isolated cache instance for this test
+    isolated_cache = CacheManager()
+    
+    @cached(ttl=60, cache_instance=isolated_cache)
     def cached_expensive_function(x):
         return expensive_function(x)
     
@@ -111,13 +114,14 @@ def test_cache_invalidate_decorator():
     """Test @cache_invalidate decorator"""
     print("\nTesting @cache_invalidate decorator...")
     
-    from utils.cache_manager import cache_manager
+    # Create isolated cache instance for this test
+    isolated_cache = CacheManager()
     
     # Set up some cached data
-    cache_manager.set("user:123:profile", "old_profile")
-    cache_manager.set("user:123:settings", "old_settings")
+    isolated_cache.set("user:123:profile", "old_profile")
+    isolated_cache.set("user:123:settings", "old_settings")
     
-    @cache_invalidate("user:123:")
+    @cache_invalidate("user:123:", cache_instance=isolated_cache)
     def update_user_data():
         return "data_updated"
     
@@ -126,8 +130,8 @@ def test_cache_invalidate_decorator():
     assert result == "data_updated"
     
     # Verify cache was invalidated
-    assert cache_manager.get("user:123:profile") is None
-    assert cache_manager.get("user:123:settings") is None
+    assert isolated_cache.get("user:123:profile") is None
+    assert isolated_cache.get("user:123:settings") is None
     
     print("✓ @cache_invalidate decorator works")
 
