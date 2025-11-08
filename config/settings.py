@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: str = "INFO"
     
+    # Admin Users
+    admin_user_ids: str = ""
+    
     class Config:
         env_file = ".env"
         case_sensitive = False

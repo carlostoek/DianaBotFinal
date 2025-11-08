@@ -31,6 +31,27 @@ utils/        # Utilidades comunes
 3. Ejecutar `docker-compose up -d`
 4. Ejecutar migraciones de base de datos
 
+## Sistema Administrativo
+
+El bot incluye un sistema de comandos administrativos accesible mediante `/admin`.
+
+### Configuración de Administradores
+
+Para configurar usuarios administradores, agregar sus IDs de Telegram a la variable de entorno:
+
+```bash
+ADMIN_USER_IDS=123456789,987654321
+```
+
+### Funcionalidades del Panel Admin
+
+- **Gestión de Canales**: VIP y Free
+- **Gamificación**: Misiones, insignias, niveles
+- **Tienda**: Productos y desbloqueos
+- **Narrativa**: Fragmentos y árbol de decisiones
+- **Estadísticas**: Métricas del sistema
+- **Configuración**: Ajustes del bot
+
 ## Desarrollo
 
 Seguir la [Hoja de Ruta](docs/HOJA_DE_RUTA.md) para implementación incremental.
