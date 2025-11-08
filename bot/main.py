@@ -7,7 +7,7 @@ from datetime import datetime, time as dt_time
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 from config.settings import settings
 from database.connection import get_db
 from database.models import User
@@ -49,6 +49,9 @@ from bot.commands.subscription import subscription_offers, subscription_conversi
 
 # Import secret commands
 from bot.commands.secrets import secret_command, secrets_command, hint_command
+
+# Import admin commands
+from bot.commands.admin import admin_command_handler, admin_callback_handler
 
 # Import channel handlers
 from bot.handlers.channels import handle_new_channel_member, handle_channel_post, send_vip_invite, send_free_channel_info
@@ -164,6 +167,10 @@ def main():
     application.add_handler(CommandHandler("secret", secret_command))
     application.add_handler(CommandHandler("secrets", secrets_command))
     application.add_handler(CommandHandler("hint", hint_command))
+
+    # Add admin commands
+    application.add_handler(CommandHandler("admin", admin_command_handler))
+    application.add_handler(CallbackQueryHandler(admin_callback_handler, pattern="^admin_"))
 
     # Add channel event handlers
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_channel_member))
