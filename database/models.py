@@ -1,9 +1,14 @@
 from sqlalchemy import Column, Integer, BigInteger, String, DateTime, Boolean, Text, JSON, ForeignKey, UniqueConstraint, Index, Date, Float, Numeric, ARRAY
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.dialects.postgresql import JSONB
 from database.connection import Base
 from datetime import datetime
 
+from sqlalchemy.dialects.postgresql import JSONB
+
+# Use JSONB for better performance in PostgreSQL
+JSON_COLUMN_TYPE = JSONB
 
 class User(Base):
     """User model for storing user information"""
@@ -11,7 +16,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     telegram_id = Column(BigInteger, unique=True, index=True, nullable=False)
-    username = Column(String(255), nullable=True)
+    username = Column(String(255), nullable=True, index=True)
     first_name = Column(String(255), nullable=False)
     last_name = Column(String(255), nullable=True)
     language_code = Column(String(10), nullable=True)
@@ -34,9 +39,16 @@ class User(Base):
     last_active = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
+    balance = relationship("UserBalance", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    narrative_progress = relationship("UserNarrativeProgress", back_populates="user", cascade="all, delete-orphan")
+    achievements = relationship("UserAchievement", back_populates="user", cascade="all, delete-orphan")
+    missions = relationship("UserMission", back_populates="user", cascade="all, delete-orphan")
+    inventory = relationship("UserInventory", back_populates="user", cascade="all, delete-orphan")
+    subscriptions = relationship("Subscription", back_populates="user", cascade="all, delete-orphan")
     bids = relationship("Bid", back_populates="user")
     purchases = relationship("UserPurchase", back_populates="user")
     archetype_data = relationship("UserArchetype", back_populates="user", uselist=False)
+    experience_progress = relationship("UserExperienceProgress", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(telegram_id={self.telegram_id}, username={self.username})>"
@@ -92,10 +104,13 @@ class UserBalance(Base):
     """User balance model for besitos economy"""
     __tablename__ = "user_balances"
 
-    user_id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     besitos = Column(Integer, default=0, nullable=False)
     lifetime_besitos = Column(Integer, default=0, nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    user = relationship("User", back_populates="balance")
 
     def __repr__(self):
         return f"<UserBalance(user_id={self.user_id}, besitos={self.besitos})>"
@@ -106,13 +121,16 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     amount = Column(Integer, nullable=False)
     transaction_type = Column(String(50), nullable=False)  # 'earn', 'spend', 'gift'
-    source = Column(String(100), nullable=False)  # 'mission', 'purchase', 'daily_reward', etc.
+    source = Column(String(100), nullable=False, index=True)  # 'mission', 'purchase', 'daily_reward', etc.
     description = Column(Text, nullable=True)
-    transaction_metadata = Column(JSON, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    transaction_metadata = Column(JSON_COLUMN_TYPE, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    # Relationships
+    user = relationship("User")
 
     def __repr__(self):
         return f"<Transaction(user_id={self.user_id}, amount={self.amount}, type={self.transaction_type})>"
@@ -185,10 +203,13 @@ class NarrativeLevel(Base):
     level_key = Column(String(100), unique=True, nullable=False, index=True)
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    unlock_conditions = Column(JSON, nullable=True)  # besitos, items, achievements requeridos
+    unlock_conditions = Column(JSON_COLUMN_TYPE, nullable=True)  # besitos, items, achievements requeridos
     order_index = Column(Integer, nullable=False)
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    fragments = relationship("NarrativeFragment", back_populates="level", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<NarrativeLevel(level_key={self.level_key}, title={self.title})>"
@@ -200,17 +221,18 @@ class NarrativeFragment(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     fragment_key = Column(String(100), unique=True, nullable=False, index=True)
-    level_id = Column(Integer, nullable=False, index=True)
+    level_id = Column(Integer, ForeignKey("narrative_levels.id"), nullable=False, index=True)
     title = Column(String(255), nullable=False)
-    unlock_conditions = Column(JSON, nullable=True)
+    unlock_conditions = Column(JSON_COLUMN_TYPE, nullable=True)
     order_index = Column(Integer, nullable=False)
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, index=True)
     is_starting_fragment = Column(Boolean, default=False)
-    is_secret = Column(Boolean, default=False)  # Fragmento oculto que requiere descubrimiento
+    is_secret = Column(Boolean, default=False, index=True)  # Fragmento oculto que requiere descubrimiento
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     progress = relationship("UserNarrativeProgress", back_populates="fragment")
+    level = relationship("NarrativeLevel", back_populates="fragments")
 
     def __repr__(self):
         return f"<NarrativeFragment(fragment_key={self.fragment_key}, title={self.title})>"
@@ -220,15 +242,16 @@ class UserNarrativeProgress(Base):
     """User narrative progress tracking"""
     __tablename__ = "user_narrative_progress"
 
-    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
-    fragment_id = Column(Integer, ForeignKey("narrative_fragments.id"), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    fragment_id = Column(Integer, ForeignKey("narrative_fragments.id", ondelete="CASCADE"), primary_key=True)
     completed_at = Column(DateTime(timezone=True), server_default=func.now())
-    choices_made = Column(JSON, nullable=True)  # decisiones tomadas en este fragmento
-    narrative_flags = Column(JSON, nullable=True)  # flags narrativos acumulados
+    choices_made = Column(JSON_COLUMN_TYPE, nullable=True)  # decisiones tomadas en este fragmento
+    narrative_flags = Column(JSON_COLUMN_TYPE, nullable=True)  # flags narrativos acumulados
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
     fragment = relationship("NarrativeFragment", back_populates="progress")
+    user = relationship("User", back_populates="narrative_progress")
 
     def __repr__(self):
         return f"<UserNarrativeProgress(user_id={self.user_id}, fragment_id={self.fragment_id})>"
@@ -357,14 +380,17 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     subscription_type = Column(String(50), nullable=False)  # 'monthly', 'yearly', 'lifetime'
     start_date = Column(DateTime(timezone=True), nullable=False)
-    end_date = Column(DateTime(timezone=True), nullable=False)
-    status = Column(String(50), nullable=False)  # 'active', 'expired', 'cancelled'
+    end_date = Column(DateTime(timezone=True), nullable=False, index=True)
+    status = Column(String(50), nullable=False, index=True)  # 'active', 'expired', 'cancelled'
     payment_reference = Column(String(255), nullable=True)
     auto_renew = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User", back_populates="subscriptions")
 
     def __repr__(self):
         return f"<Subscription(user_id={self.user_id}, type={self.subscription_type}, status={self.status})>"
