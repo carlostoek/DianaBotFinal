@@ -28,12 +28,8 @@ class AdminCommandSystem:
     
     async def is_user_admin(self, user_id: int) -> bool:
         """Verifica si el usuario tiene permisos de administrador"""
-        try:
-            # Simple check against hardcoded admin IDs from environment
-            return user_id in ADMIN_USER_IDS
-        except Exception as e:
-            logger.error(f"Error verificando permisos de admin para usuario {user_id}: {e}")
-            return False
+        # Simple check against hardcoded admin IDs from environment
+        return user_id in ADMIN_USER_IDS
     
     async def show_admin_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Muestra el menú principal de administración"""
@@ -104,27 +100,24 @@ class AdminCommandSystem:
                 )
             return
         
-        # Manejar diferentes tipos de callbacks
-        if callback_data == "admin_main_menu":
-            await self._show_main_menu(query)
-        elif callback_data == "admin_back":
-            await self._show_main_menu(query)  # Simple back to main menu for now
-        elif callback_data == "admin_vip":
-            await self._show_vip_menu(query)
-        elif callback_data == "admin_free":
-            await self._show_free_menu(query)
-        elif callback_data == "admin_kinky_game":
-            await self._show_gamification_menu(query)
-        elif callback_data == "admin_shop":
-            await self._show_shop_menu(query)
-        elif callback_data == "admin_narrative_panel":
-            await self._show_narrative_menu(query)
-        elif callback_data == "admin_midivan":
-            await self._show_midivan_menu(query)
-        elif callback_data == "admin_stats":
-            await self._show_stats_menu(query)
-        elif callback_data == "admin_config":
-            await self._show_config_menu(query)
+        # Dispatch dictionary for callback handlers
+        callback_handlers = {
+            "admin_main_menu": self._show_main_menu,
+            "admin_back": self._show_main_menu,  # Simple back to main menu for now
+            "admin_vip": self._show_vip_menu,
+            "admin_free": self._show_free_menu,
+            "admin_kinky_game": self._show_gamification_menu,
+            "admin_shop": self._show_shop_menu,
+            "admin_narrative_panel": self._show_narrative_menu,
+            "admin_midivan": self._show_midivan_menu,
+            "admin_stats": self._show_stats_menu,
+            "admin_config": self._show_config_menu
+        }
+        
+        # Handle callback using dispatch dictionary
+        handler = callback_handlers.get(callback_data or "")
+        if handler:
+            await handler(query)
         else:
             if query.message:
                 await query.edit_message_text(
